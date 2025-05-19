@@ -16,6 +16,21 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class RemoteCommandService
 {
+    /**
+     * SSH连接超时时间（秒）
+     */
+    private const SSH_READ_TIMEOUT = 0.2; // 200ms
+
+    /**
+     * 最大等待时间（秒）
+     */
+    private const MAX_WAIT_TIME = 5;
+
+    /**
+     * 短暂等待时间（微秒）
+     */
+    private const POLLING_INTERVAL = 100000; // 100ms
+
     public function __construct(
         private readonly RemoteCommandRepository $remoteCommandRepository,
         private readonly EntityManagerInterface $entityManager,
@@ -55,7 +70,22 @@ class RemoteCommandService
     /**
      * 创建SSH连接
      */
-    private function createSshConnection(Node $node): SSH2
+    private function createSshConnection(Node $node, bool $useSudo = false): SSH2
+    {
+        $ssh = $this->initializeSshConnection($node);
+
+        // 如果需要sudo且用户不是root，需要切换到root
+        if ($useSudo && 'root' !== $node->getSshUser()) {
+            $this->switchToRootUser($ssh, $node);
+        }
+
+        return $ssh;
+    }
+
+    /**
+     * 初始化SSH连接
+     */
+    private function initializeSshConnection(Node $node): SSH2
     {
         $ssh = new SSH2($node->getSshHost(), $node->getSshPort());
         if (!$ssh->login($node->getSshUser(), $node->getSshPassword())) {
@@ -65,22 +95,82 @@ class RemoteCommandService
         // 设置超时为0（无超时）
         $ssh->setTimeout(0);
 
-        // 如果用户不是root，需要切换到root
-        if ('root' !== $node->getSshUser()) {
-            // 执行切换到root账号的命令
-            $ssh->write("sudo su -\n"); // 使用sudo切换到root账号
-            $ssh->read('password for'); // 读取sudo密码提示
-            $ssh->write("{$node->getSshPassword()}\n"); // 输入sudo密码
-            $ssh->read('root@'); // 读取root账号提示符
-        }
-
         return $ssh;
+    }
+
+    /**
+     * 切换到root用户
+     */
+    private function switchToRootUser(SSH2 $ssh, Node $node): void
+    {
+        try {
+            // 执行切换到root账号的命令
+            $ssh->write("sudo su -\n");
+
+            // 使用较短的超时时间来检查响应
+            $ssh->setTimeout(self::SSH_READ_TIMEOUT);
+
+            // 使用轮询方式读取输出，避免长时间等待
+            $startTime = time();
+            $output = '';
+
+            // 最多等待设定的最大时间
+            while ((time() - $startTime) < self::MAX_WAIT_TIME) {
+                // 尝试读取小块数据，不使用正则匹配
+                $temp = $ssh->read();
+                if (!empty($temp)) {
+                    $output .= $temp;
+                    // 检查是否已经收到密码提示或root提示
+                    if (preg_match('/[Pp]assword|密码|口令|认证/i', $output)) {
+                        $ssh->write("{$node->getSshPassword()}\n"); // 输入sudo密码
+                        $this->waitForRootPrompt($ssh);
+                        break;
+                    } else if (preg_match('/root@|#\s*$/', $output)) {
+                        // 已经是root用户或直接切换成功
+                        break;
+                    }
+                }
+                // 短暂等待减少CPU使用
+                usleep(self::POLLING_INTERVAL);
+            }
+
+            $this->logger->debug('SSH响应输出', ['output' => $output]);
+
+            // 恢复无超时设置
+            $ssh->setTimeout(0);
+        } catch (\Exception $e) {
+            $this->logger->warning('切换到root用户时出错: ' . $e->getMessage(), ['node' => $node->getId()]);
+            // 失败后尝试继续，使用当前用户执行命令
+        }
+    }
+
+    /**
+     * 等待root提示符
+     */
+    private function waitForRootPrompt(SSH2 $ssh): void
+    {
+        // 继续读取直到出现root提示符
+        $rootOutput = '';
+        $startRootTime = time();
+        $foundRoot = false;
+
+        while ((time() - $startRootTime) < self::MAX_WAIT_TIME && !$foundRoot) {
+            $temp = $ssh->read();
+            if (!empty($temp)) {
+                $rootOutput .= $temp;
+                if (preg_match('/root@|#\s*$/', $rootOutput)) {
+                    $foundRoot = true;
+                }
+            }
+            // 短暂等待减少CPU使用
+            usleep(self::POLLING_INTERVAL);
+        }
     }
 
     /**
      * 执行SSH命令
      */
-    private function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, Node $node = null): string
+    private function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
     {
         // 如果有工作目录，先切换到该目录
         if ($workingDirectory !== null) {
@@ -117,22 +207,20 @@ class RemoteCommandService
         $this->entityManager->flush();
 
         $node = $command->getNode();
-        $sshConnOwned = false;
 
         if (null === $ssh) {
             try {
-                $ssh = $this->createSshConnection($node);
-                $sshConnOwned = true;
+                $ssh = $this->createSshConnection($node, $command->isUseSudo());
             } catch (\Exception $e) {
                 $command->setStatus(CommandStatus::FAILED);
                 $command->setResult('SSH连接失败: ' . $e->getMessage());
                 $this->entityManager->flush();
-                
+
                 $this->logger->error('执行命令时SSH连接失败', [
                     'command' => $command,
                     'error' => $e->getMessage(),
                 ]);
-                
+
                 return $command;
             }
         }
@@ -142,10 +230,10 @@ class RemoteCommandService
 
         try {
             $result = $this->execSshCommand(
-                $ssh, 
-                $command->getCommand(), 
-                $command->getWorkingDirectory(), 
-                $command->isUseSudo(), 
+                $ssh,
+                $command->getCommand(),
+                $command->getWorkingDirectory(),
+                $command->isUseSudo(),
                 $node
             );
 
@@ -153,7 +241,7 @@ class RemoteCommandService
             $command->setExecutionTime($duration->asSeconds());
             $command->setResult($result);
             $command->setStatus(CommandStatus::COMPLETED);
-            
+
             $this->logger->info('命令执行成功', [
                 'command' => $command,
                 'duration' => $duration->asString(),
@@ -163,7 +251,7 @@ class RemoteCommandService
             $command->setExecutionTime($duration->asSeconds());
             $command->setResult('执行失败: ' . $e->getMessage());
             $command->setStatus(CommandStatus::FAILED);
-            
+
             $this->logger->error('命令执行失败', [
                 'command' => $command,
                 'error' => $e->getMessage(),
@@ -183,7 +271,7 @@ class RemoteCommandService
     {
         $message = new RemoteCommandExecuteMessage($command->getId());
         $this->messageBus->dispatch($message);
-        
+
         $this->logger->info('命令已加入执行队列', ['command' => $command]);
     }
 
@@ -227,10 +315,10 @@ class RemoteCommandService
         if ($command->getStatus() === CommandStatus::PENDING) {
             $command->setStatus(CommandStatus::CANCELED);
             $this->entityManager->flush();
-            
+
             $this->logger->info('命令已取消', ['command' => $command]);
         }
-        
+
         return $command;
     }
 }

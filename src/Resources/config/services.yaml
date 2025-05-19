@@ -6,6 +6,8 @@ services:
 
   ServerSshCommandBundle\Command\:
     resource: '../../Command/'
+  ServerSshCommandBundle\Controller\:
+    resource: '../../Controller/'
   ServerSshCommandBundle\MessageHandler\:
     resource: '../../MessageHandler/'
   ServerSshCommandBundle\Repository\:
