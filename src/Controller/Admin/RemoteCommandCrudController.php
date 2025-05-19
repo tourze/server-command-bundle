@@ -1,6 +1,6 @@
 <?php
 
-namespace ServerSshCommandBundle\Controller\Admin;
+namespace ServerCommandBundle\Controller\Admin;
 
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -28,9 +28,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\TextFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
-use ServerSshCommandBundle\Entity\RemoteCommand;
-use ServerSshCommandBundle\Enum\CommandStatus;
-use ServerSshCommandBundle\Service\RemoteCommandService;
+use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Service\RemoteCommandService;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

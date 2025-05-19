@@ -1,11 +1,11 @@
-# server-ssh-command-bundle
+# server-command-bundle
 
 服务器 SSH 命令执行工具，用于在远程服务器上执行命令并管理命令执行状态。
 
 ## 安装
 
 ```bash
-composer require tourze/server-ssh-command-bundle
+composer require tourze/server-command-bundle
 ```
 
 ## 功能特性
@@ -22,7 +22,7 @@ composer require tourze/server-ssh-command-bundle
 <?php
 
 use ServerNodeBundle\Entity\Node;
-use ServerSshCommandBundle\Service\RemoteCommandService;
+use ServerCommandBundle\Service\RemoteCommandService;
 
 // 获取服务
 $service = $container->get(RemoteCommandService::class);
@@ -53,7 +53,7 @@ $service->scheduleCommand($command);
 // config/bundles.php
 return [
     // ...
-    ServerSshCommandBundle\ServerSshCommandBundle::class => ['all' => true],
+    ServerCommandBundle\ServerCommandBundle::class => ['all' => true],
     // ...
 ];
 ```

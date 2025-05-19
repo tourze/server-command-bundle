@@ -1,11 +1,11 @@
 <?php
 
-namespace ServerSshCommandBundle\Command;
+namespace ServerCommandBundle\Command;
 
+use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Repository\NodeRepository;
-use ServerSshCommandBundle\Entity\RemoteCommand;
-use ServerSshCommandBundle\Enum\CommandStatus;
-use ServerSshCommandBundle\Service\RemoteCommandService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

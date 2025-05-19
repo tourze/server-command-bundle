@@ -1,6 +1,6 @@
 <?php
 
-namespace ServerSshCommandBundle\Enum;
+namespace ServerCommandBundle\Enum;
 
 enum CommandStatus: string
 {

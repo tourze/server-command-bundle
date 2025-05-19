@@ -1,10 +1,10 @@
 <?php
 
-namespace ServerSshCommandBundle\MessageHandler;
+namespace ServerCommandBundle\MessageHandler;
 
 use Psr\Log\LoggerInterface;
-use ServerSshCommandBundle\Message\RemoteCommandExecuteMessage;
-use ServerSshCommandBundle\Service\RemoteCommandService;
+use ServerCommandBundle\Message\RemoteCommandExecuteMessage;
+use ServerCommandBundle\Service\RemoteCommandService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]

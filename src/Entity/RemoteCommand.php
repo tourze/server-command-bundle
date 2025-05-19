@@ -1,12 +1,12 @@
 <?php
 
-namespace ServerSshCommandBundle\Entity;
+namespace ServerCommandBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Repository\RemoteCommandRepository;
 use ServerNodeBundle\Entity\Node;
-use ServerSshCommandBundle\Enum\CommandStatus;
-use ServerSshCommandBundle\Repository\RemoteCommandRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineTimestampBundle\Attribute\CreateTimeColumn;
 use Tourze\DoctrineTimestampBundle\Attribute\UpdateTimeColumn;

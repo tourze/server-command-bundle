@@ -1,9 +1,9 @@
 <?php
 
-namespace ServerSshCommandBundle\Service;
+namespace ServerCommandBundle\Service;
 
 use Knp\Menu\ItemInterface;
-use ServerSshCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Entity\RemoteCommand;
 use Tourze\EasyAdminMenuBundle\Service\LinkGeneratorInterface;
 use Tourze\EasyAdminMenuBundle\Service\MenuProviderInterface;
 

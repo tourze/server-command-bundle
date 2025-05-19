@@ -1,17 +1,17 @@
 <?php
 
-namespace ServerSshCommandBundle\Service;
+namespace ServerCommandBundle\Service;
 
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use phpseclib3\Net\SSH2;
 use Psr\Log\LoggerInterface;
 use SebastianBergmann\Timer\Timer;
+use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Message\RemoteCommandExecuteMessage;
+use ServerCommandBundle\Repository\RemoteCommandRepository;
 use ServerNodeBundle\Entity\Node;
-use ServerSshCommandBundle\Entity\RemoteCommand;
-use ServerSshCommandBundle\Enum\CommandStatus;
-use ServerSshCommandBundle\Message\RemoteCommandExecuteMessage;
-use ServerSshCommandBundle\Repository\RemoteCommandRepository;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 class RemoteCommandService

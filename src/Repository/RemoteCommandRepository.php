@@ -1,12 +1,12 @@
 <?php
 
-namespace ServerSshCommandBundle\Repository;
+namespace ServerCommandBundle\Repository;
 
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Enum\CommandStatus;
 use ServerNodeBundle\Entity\Node;
-use ServerSshCommandBundle\Entity\RemoteCommand;
-use ServerSshCommandBundle\Enum\CommandStatus;
 
 /**
  * @extends ServiceEntityRepository<RemoteCommand>

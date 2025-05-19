@@ -1,6 +1,6 @@
 <?php
 
-namespace ServerSshCommandBundle\Message;
+namespace ServerCommandBundle\Message;
 
 class RemoteCommandExecuteMessage
 {

@@ -4,13 +4,15 @@ services:
     autowire: true      # Automatically injects dependencies in your services.
     autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-  ServerSshCommandBundle\Command\:
+  ServerCommandBundle\Command\:
     resource: '../../Command/'
-  ServerSshCommandBundle\Controller\:
+  ServerCommandBundle\Controller\:
     resource: '../../Controller/'
-  ServerSshCommandBundle\MessageHandler\:
+  ServerCommandBundle\DataFixtures\:
+    resource: '../../DataFixtures/'
+  ServerCommandBundle\MessageHandler\:
     resource: '../../MessageHandler/'
-  ServerSshCommandBundle\Repository\:
+  ServerCommandBundle\Repository\:
     resource: '../../Repository/'
-  ServerSshCommandBundle\Service\:
+  ServerCommandBundle\Service\:
     resource: '../../Service/'
