@@ -42,5 +42,10 @@
     "psr-4": {
       "ServerCommandBundle\\": "src"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ServerCommandBundle\\Tests\\": "tests"
+    }
   }
 }
