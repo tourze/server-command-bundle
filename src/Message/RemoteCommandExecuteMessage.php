@@ -2,7 +2,9 @@
 
 namespace ServerCommandBundle\Message;
 
-class RemoteCommandExecuteMessage
+use Tourze\Symfony\Async\Message\AsyncMessageInterface;
+
+class RemoteCommandExecuteMessage implements AsyncMessageInterface
 {
     public function __construct(
         private readonly string $commandId,
