@@ -34,6 +34,7 @@
     "tourze/doctrine-user-bundle": "0.0.*",
     "tourze/easy-admin-attribute": "0.1.*",
     "tourze/easy-admin-menu-bundle": "0.1.*",
+    "tourze/server-node-bundle": "0.0.*",
     "tourze/symfony-async-bundle": "0.0.*"
   },
   "require-dev": {
