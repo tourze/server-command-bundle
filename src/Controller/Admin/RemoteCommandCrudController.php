@@ -39,7 +39,7 @@ class RemoteCommandCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
-        private readonly AdminUrlGenerator    $adminUrlGenerator,
+        private readonly AdminUrlGenerator $adminUrlGenerator,
     )
     {
     }
@@ -196,12 +196,8 @@ class RemoteCommandCrudController extends AbstractCrudController
         /** @var RemoteCommand $command */
         $command = $context->getEntity()->getInstance();
 
-        if ($command->getStatus() === CommandStatus::PENDING || $command->getStatus() === CommandStatus::FAILED) {
-            $this->remoteCommandService->executeCommand($command);
-            $this->addFlash('success', sprintf('命令 %s 已开始执行', $command->getName()));
-        } else {
-            $this->addFlash('warning', sprintf('命令 %s 当前状态不允许执行', $command->getName()));
-        }
+        $this->remoteCommandService->executeCommand($command);
+        $this->addFlash('success', sprintf('命令 %s 已开始执行', $command->getName()));
 
         return $this->redirect($this->adminUrlGenerator
             ->setController(self::class)
