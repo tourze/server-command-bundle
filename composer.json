@@ -38,7 +38,8 @@
     "tourze/easy-admin-attribute": "0.1.*",
     "tourze/easy-admin-menu-bundle": "0.1.*",
     "tourze/server-node-bundle": "0.0.*",
-    "tourze/symfony-async-bundle": "0.0.*"
+    "tourze/symfony-async-bundle": "0.0.*",
+    "tourze/symfony-routing-auto-loader-bundle": "0.0.*"
   },
   "require-dev": {
     "phpstan/phpstan": "^2.1",
