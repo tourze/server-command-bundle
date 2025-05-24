@@ -1,72 +1,120 @@
-{% extends '@!EasyAdmin/layout.html.twig' %}
-
-{% block page_title %}服务器终端{% endblock %}
-
-{% block body_class %}page-terminal{% endblock %}
-
-{% block content_header %}
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-terminal"></i>
-            服务器终端
-        </h1>
-        <div class="page-actions">
-            <div class="dropdown">
-                <select id="server-select" class="form-control" style="width: 250px;">
-                    <option value="">请选择服务器</option>
-                    {% for node in nodes %}
-                        <option value="{{ node.id }}" 
-                                data-host="{{ node.sshHost }}" 
-                                data-port="{{ node.sshPort }}"
-                                data-user="{{ node.sshUser }}">
-                            {{ node.name }} ({{ node.sshHost }}:{{ node.sshPort }})
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-    </div>
-{% endblock %}
-
-{% block main %}
-    <div class="terminal-container">
-        <!-- 终端输出区域 -->
-        <div class="terminal-output" id="terminal-output">
-            <div class="terminal-welcome">
-                <p>欢迎使用服务器终端模拟器</p>
-                <p>请先选择一个服务器节点，然后在底部输入命令</p>
-            </div>
-        </div>
-
-        <!-- 命令输入区域 -->
-        <div class="terminal-input-container" id="terminal-input-container" style="display: none;">
-            <div class="terminal-input-line">
-                <span class="terminal-prompt" id="terminal-prompt">root@server:~$</span>
-                <input type="text" 
-                       id="command-input" 
-                       class="terminal-input" 
-                       placeholder="输入命令..."
-                       autocomplete="off">
-            </div>
-        </div>
-    </div>
-{% endblock %}
-
-{% block content_footer %}{% endblock %}
-
-{% block stylesheets %}
-    {{ parent() }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器终端</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .terminal-container {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1e1e1e;
-            color: #00ff00;
-            font-family: 'Courier New', 'Monaco', monospace;
-            height: calc(100vh - 200px);
+        }
+
+        .terminal-app {
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            border-radius: 8px;
+            background: #1e1e1e;
+        }
+
+        .app-header {
+            background: #2d2d2d;
+            padding: 15px 20px;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            min-height: 60px;
+        }
+
+        .app-title {
+            color: #ffffff;
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .app-title i {
+            color: #00ff00;
+            margin-right: 10px;
+        }
+
+        .app-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: #404040;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 8px 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #555;
+            text-decoration: none;
+            color: #ffffff;
+        }
+
+        #server-select {
+            background: #404040;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 8px 12px;
+            min-width: 250px;
+            font-size: 14px;
+        }
+
+        #server-select:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
+        }
+
+        #server-select option {
+            background: #404040;
+            color: #ffffff;
+        }
+
+        .terminal-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            margin: 20px 0;
+        }
+
+        .terminal-container {
+            flex: 1;
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .terminal-output {
@@ -76,6 +124,8 @@
             background: #1e1e1e;
             white-space: pre-wrap;
             word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 14px;
         }
 
         .terminal-welcome {
@@ -84,46 +134,52 @@
         }
 
         .terminal-welcome p {
-            margin: 5px 0;
+            margin: 8px 0;
+            opacity: 0.8;
         }
 
         .terminal-input-container {
             background: #2d2d2d;
-            padding: 10px 20px;
+            padding: 15px 20px;
             border-top: 1px solid #404040;
+            flex-shrink: 0;
+            display: none;
         }
 
         .terminal-input-line {
             display: flex;
             align-items: center;
+            gap: 10px;
         }
 
         .terminal-prompt {
             color: #00ff00;
-            margin-right: 10px;
             white-space: nowrap;
+            font-weight: bold;
         }
 
         .terminal-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: #00ff00;
+            color: #ffffff;
             font-family: inherit;
             font-size: 14px;
             outline: none;
+            padding: 0;
         }
 
-        .terminal-input:focus {
-            outline: none;
+        .terminal-input::placeholder {
+            color: #666;
         }
 
         .command-line {
-            margin: 5px 0;
+            margin: 8px 0;
         }
 
         .command-prompt {
             color: #00ff00;
+            font-weight: bold;
         }
 
         .command-text {
@@ -135,38 +191,25 @@
             color: #cccccc;
             margin: 5px 0 15px 20px;
             white-space: pre-wrap;
+            word-break: break-all;
         }
 
         .command-error {
-            color: #ff4444;
+            color: #ff6b6b;
         }
 
         .command-info {
-            color: #ffff00;
+            color: #feca57;
             font-size: 12px;
-            margin-left: 20px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .page-actions {
-            display: flex;
-            align-items: center;
-        }
-
-        #server-select {
-            min-width: 250px;
+            margin: 5px 0 10px 20px;
+            opacity: 0.8;
         }
 
         .loading {
-            color: #ffff00;
+            color: #48cae4;
         }
 
+        /* 滚动条样式 */
         .terminal-output::-webkit-scrollbar {
             width: 8px;
         }
@@ -183,11 +226,247 @@
         .terminal-output::-webkit-scrollbar-thumb:hover {
             background: #777;
         }
-    </style>
-{% endblock %}
 
-{% block javascripts %}
-    {{ parent() }}
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                min-height: auto;
+            }
+
+            .app-title {
+                font-size: 1.25rem;
+            }
+
+            .app-actions {
+                width: 100%;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .back-btn {
+                align-self: stretch;
+                justify-content: center;
+            }
+
+            .working-dir-container {
+                width: 100%;
+            }
+
+            #working-dir-input {
+                min-width: auto;
+                width: 100%;
+            }
+
+            #server-select {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .terminal-output {
+                padding: 15px;
+                font-size: 13px;
+            }
+
+            .terminal-input-container {
+                padding: 12px 15px;
+            }
+
+            .terminal-input-line {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .terminal-output {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .terminal-input-container {
+                padding: 10px;
+            }
+
+            .app-header {
+                padding: 10px;
+            }
+
+            .dir-shortcuts {
+                gap: 2px;
+            }
+
+            .dir-btn {
+                padding: 3px 8px;
+                font-size: 10px;
+            }
+        }
+
+        /* 动画效果 */
+        .terminal-container {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 连接状态指示器 */
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+        }
+
+        .connection-status .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .working-dir-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .working-dir-container label {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        #working-dir-input {
+            background: #404040;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 13px;
+            min-width: 200px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        }
+
+        #working-dir-input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 0 1px rgba(0, 255, 0, 0.2);
+        }
+
+        .dir-shortcuts {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .dir-btn {
+            background: #555;
+            color: #ffffff;
+            border: 1px solid #666;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dir-btn:hover {
+            background: #666;
+            border-color: #777;
+        }
+
+        .dir-btn.active {
+            background: #00ff00;
+            color: #000000;
+            border-color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-app">
+        <div class="app-header">
+            <h1 class="app-title">
+                <i class="fas fa-terminal"></i>
+                服务器终端
+            </h1>
+            <div class="app-actions">
+                <a href="#" onclick="history.back()" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    返回管理后台
+                </a>
+                <div class="working-dir-container">
+                    <label for="working-dir-input">工作目录:</label>
+                    <input type="text" id="working-dir-input" value="/root" placeholder="/path/to/directory">
+                    <div class="dir-shortcuts">
+                        <button type="button" class="dir-btn" data-dir="/root">root</button>
+                        <button type="button" class="dir-btn" data-dir="/home">home</button>
+                        <button type="button" class="dir-btn" data-dir="/var/log">log</button>
+                        <button type="button" class="dir-btn" data-dir="/etc">etc</button>
+                        <button type="button" class="dir-btn" data-dir="/tmp">tmp</button>
+                    </div>
+                </div>
+                <select id="server-select">
+                    <option value="">请选择服务器</option>
+                    {% for node in nodes %}
+                        <option value="{{ node.id }}" 
+                                data-host="{{ node.sshHost }}" 
+                                data-port="{{ node.sshPort }}"
+                                data-user="{{ node.sshUser }}">
+                            {{ node.name }} ({{ node.sshHost }}:{{ node.sshPort }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="terminal-main">
+            <div class="terminal-container">
+                <!-- 终端输出区域 -->
+                <div class="terminal-output" id="terminal-output">
+                    <div class="terminal-welcome">
+                        <p>欢迎使用服务器终端模拟器</p>
+                        <p>请先选择一个服务器节点，然后在底部输入命令</p>
+                    </div>
+                </div>
+
+                <!-- 命令输入区域 -->
+                <div class="terminal-input-container" id="terminal-input-container">
+                    <div class="terminal-input-line">
+                        <span class="terminal-prompt" id="terminal-prompt">root@server:~$</span>
+                        <input type="text" 
+                               id="command-input" 
+                               class="terminal-input" 
+                               placeholder="输入命令..."
+                               autocomplete="off">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         class Terminal {
             constructor() {
@@ -195,6 +474,7 @@
                 this.currentNodeInfo = null;
                 this.commandHistory = [];
                 this.historyIndex = -1;
+                this.currentWorkingDir = '/root';
                 
                 this.initializeElements();
                 this.bindEvents();
@@ -206,12 +486,35 @@
                 this.terminalInputContainer = document.getElementById('terminal-input-container');
                 this.commandInput = document.getElementById('command-input');
                 this.terminalPrompt = document.getElementById('terminal-prompt');
+                this.workingDirInput = document.getElementById('working-dir-input');
+                this.dirButtons = document.querySelectorAll('.dir-btn');
             }
 
             bindEvents() {
                 // 服务器选择变化
                 this.serverSelect.addEventListener('change', (e) => {
                     this.selectServer(e.target.value);
+                });
+
+                // 工作目录输入变化
+                this.workingDirInput.addEventListener('change', (e) => {
+                    this.changeWorkingDirectory(e.target.value);
+                });
+
+                this.workingDirInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.changeWorkingDirectory(e.target.value);
+                    }
+                });
+
+                // 目录快捷按钮
+                this.dirButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const dir = e.target.dataset.dir;
+                        this.workingDirInput.value = dir;
+                        this.changeWorkingDirectory(dir);
+                        this.updateDirButtonState(dir);
+                    });
                 });
 
                 // 命令输入处理
@@ -227,6 +530,13 @@
                         this.navigateHistory(1);
                     }
                 });
+
+                // 页面聚焦时自动聚焦到输入框
+                window.addEventListener('focus', () => {
+                    if (this.currentNodeId && this.commandInput) {
+                        this.commandInput.focus();
+                    }
+                });
             }
 
             selectServer(nodeId) {
@@ -235,7 +545,7 @@
                     this.currentNodeInfo = null;
                     this.terminalInputContainer.style.display = 'none';
                     this.clearOutput();
-                    this.addLine('请选择一个服务器节点', 'terminal-welcome');
+                    this.addWelcomeMessage();
                     return;
                 }
 
@@ -245,14 +555,17 @@
                     host: option.dataset.host,
                     port: option.dataset.port,
                     user: option.dataset.user,
-                    name: option.textContent
+                    name: option.textContent.trim()
                 };
+
+                // 初始化工作目录
+                this.currentWorkingDir = this.workingDirInput.value || '/root';
+                this.updateDirButtonState(this.currentWorkingDir);
 
                 this.updatePrompt();
                 this.terminalInputContainer.style.display = 'block';
                 this.clearOutput();
-                this.addLine(`已连接到: ${this.currentNodeInfo.name}`, 'command-info');
-                this.addLine('', '');
+                this.addConnectionMessage();
                 
                 // 加载历史命令
                 this.loadHistory();
@@ -263,9 +576,36 @@
                 }, 100);
             }
 
+            addWelcomeMessage() {
+                this.addLine('欢迎使用服务器终端模拟器', 'terminal-welcome');
+                this.addLine('请先选择一个服务器节点，然后在底部输入命令', 'terminal-welcome');
+            }
+
+            addConnectionMessage() {
+                this.addLine(`正在连接到: ${this.currentNodeInfo.name}`, 'command-info');
+                this.addLine(`服务器地址: ${this.currentNodeInfo.host}:${this.currentNodeInfo.port}`, 'command-info');
+                this.addLine(`用户: ${this.currentNodeInfo.user}`, 'command-info');
+                this.addLine(`当前目录: ${this.currentWorkingDir}`, 'command-info');
+                this.addLine('', '');
+                this.addLine('连接成功！您现在可以输入命令。', 'terminal-welcome');
+                this.addLine('提示：使用上下箭头键浏览命令历史，可以在上方修改工作目录', 'command-info');
+                this.addLine('', '');
+            }
+
             updatePrompt() {
                 if (this.currentNodeInfo) {
-                    this.terminalPrompt.textContent = `${this.currentNodeInfo.user}@${this.currentNodeInfo.host}:~$`;
+                    // 简化目录显示：如果是/root显示~，其他显示目录名
+                    let displayDir = this.currentWorkingDir;
+                    if (displayDir === '/root') {
+                        displayDir = '~';
+                    } else if (displayDir.length > 20) {
+                        // 如果路径太长，只显示最后两级目录
+                        const parts = displayDir.split('/').filter(p => p);
+                        if (parts.length > 2) {
+                            displayDir = '.../' + parts.slice(-2).join('/');
+                        }
+                    }
+                    this.terminalPrompt.textContent = `${this.currentNodeInfo.user}@${this.currentNodeInfo.host}:${displayDir}$`;
                 }
             }
 
@@ -287,7 +627,7 @@
                 // 显示命令
                 const commandLine = document.createElement('div');
                 commandLine.className = 'command-line';
-                commandLine.innerHTML = `<span class="command-prompt">${this.terminalPrompt.textContent}</span><span class="command-text">${this.escapeHtml(command)}</span>`;
+                commandLine.innerHTML = `<span class="command-prompt">${this.escapeHtml(this.terminalPrompt.textContent)}</span><span class="command-text">${this.escapeHtml(command)}</span>`;
                 this.terminalOutput.appendChild(commandLine);
 
                 // 显示结果
@@ -322,11 +662,15 @@
                 // 清空输入框
                 this.commandInput.value = '';
 
-                // 显示正在执行
-                this.addCommandLine(command, '正在执行...', 'running', null);
+                // 显示正在执行状态
+                const loadingLine = document.createElement('div');
+                loadingLine.className = 'loading';
+                loadingLine.textContent = '正在执行...';
+                this.terminalOutput.appendChild(loadingLine);
+                this.scrollToBottom();
 
-                // 发送AJAX请求
-                fetch('{{ path('admin_terminal_execute') }}', {
+                // 发送真实的AJAX请求
+                fetch('/admin/terminal/execute', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -334,15 +678,14 @@
                     body: new URLSearchParams({
                         nodeId: this.currentNodeId,
                         command: command,
-                        workingDir: '/root'
+                        workingDir: this.currentWorkingDir
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // 移除"正在执行..."的行
-                    const lastLines = this.terminalOutput.children;
-                    if (lastLines.length >= 2) {
-                        this.terminalOutput.removeChild(lastLines[lastLines.length - 1]); // 移除结果行
+                    // 移除加载状态
+                    if (this.terminalOutput.contains(loadingLine)) {
+                        this.terminalOutput.removeChild(loadingLine);
                     }
 
                     if (data.success) {
@@ -352,10 +695,9 @@
                     }
                 })
                 .catch(error => {
-                    // 移除"正在执行..."的行
-                    const lastLines = this.terminalOutput.children;
-                    if (lastLines.length >= 2) {
-                        this.terminalOutput.removeChild(lastLines[lastLines.length - 1]);
+                    // 移除加载状态
+                    if (this.terminalOutput.contains(loadingLine)) {
+                        this.terminalOutput.removeChild(loadingLine);
                     }
                     this.addCommandLine(command, `网络错误: ${error.message}`, 'failed', null);
                 });
@@ -364,12 +706,12 @@
             loadHistory() {
                 if (!this.currentNodeId) return;
 
-                fetch(`{{ path('admin_terminal_history', {nodeId: '__NODE_ID__'}) }}`.replace('__NODE_ID__', this.currentNodeId))
+                fetch(`/admin/terminal/history/${this.currentNodeId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.history.length > 0) {
-                        this.addLine('=== 历史命令 ===', 'command-info');
-                        data.history.reverse().forEach(cmd => {
+                        this.addLine('=== 最近执行的命令 ===', 'command-info');
+                        data.history.slice(-10).reverse().forEach(cmd => {
                             this.addCommandLine(cmd.command, cmd.result, cmd.status, cmd.executionTime);
                         });
                         this.addLine('=== 当前会话 ===', 'command-info');
@@ -384,7 +726,7 @@
                 if (this.commandHistory.length === 0) return;
 
                 this.historyIndex += direction;
-                
+
                 if (this.historyIndex < -1) {
                     this.historyIndex = -1;
                 } else if (this.historyIndex >= this.commandHistory.length) {
@@ -407,6 +749,31 @@
                 div.textContent = text;
                 return div.innerHTML;
             }
+
+            changeWorkingDirectory(newDir) {
+                if (!newDir.trim()) {
+                    return;
+                }
+
+                newDir = newDir.trim();
+                this.currentWorkingDir = newDir;
+                this.updatePrompt();
+                this.updateDirButtonState(newDir);
+
+                if (this.currentNodeId) {
+                    this.addLine(`已切换到目录: ${newDir}`, 'command-info');
+                }
+            }
+
+            updateDirButtonState(currentDir) {
+                this.dirButtons.forEach(btn => {
+                    if (btn.dataset.dir === currentDir) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
         }
 
         // 初始化终端
@@ -414,4 +781,5 @@
             new Terminal();
         });
     </script>
-{% endblock %}
+</body>
+</html>

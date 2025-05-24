@@ -3,7 +3,7 @@
 namespace ServerCommandBundle\Tests\Controller;
 
 use PHPUnit\Framework\TestCase;
-use ServerCommandBundle\Controller\TerminalController;
+use ServerCommandBundle\Controller\Admin\TerminalController;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Service\RemoteCommandService;

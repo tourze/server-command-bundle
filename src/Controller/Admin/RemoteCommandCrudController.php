@@ -31,6 +31,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Service\RemoteCommandService;
+use ServerNodeBundle\Repository\NodeRepository;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +41,7 @@ class RemoteCommandCrudController extends AbstractCrudController
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
         private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly NodeRepository $nodeRepository,
     )
     {
     }
@@ -171,8 +173,15 @@ class RemoteCommandCrudController extends AbstractCrudController
             ->setCssClass('btn btn-danger')
             ->setIcon('fa fa-times');
 
+        $sync = Action::new('terminal', '终端视图')
+            ->linkToCrudAction('terminal')
+            ->createAsGlobalAction()
+            ->setCssClass('btn btn-primary')
+            ->setIcon('fa fa-terminal');
+
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
+            ->add(Crud::PAGE_INDEX, $sync)
             ->add(Crud::PAGE_INDEX, $executeAction)
             ->add(Crud::PAGE_DETAIL, $executeAction)
             ->add(Crud::PAGE_DETAIL, $cancelAction)
@@ -227,5 +236,15 @@ class RemoteCommandCrudController extends AbstractCrudController
             ->setAction(Action::DETAIL)
             ->setEntityId($command->getId())
             ->generateUrl());
+    }
+
+    #[AdminAction('terminal', 'terminal')]
+    public function terminal(): Response
+    {
+        $nodes = $this->nodeRepository->findAll();
+
+        return $this->render('@ServerCommand/terminal/index.html.twig', [
+            'nodes' => $nodes,
+        ]);
     }
 }

@@ -1,13 +1,12 @@
 <?php
 
-namespace ServerCommandBundle\Controller;
+namespace ServerCommandBundle\Controller\Admin;
 
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Repository\NodeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/admin/terminal', name: 'admin_terminal_')]
@@ -17,16 +16,6 @@ class TerminalController extends AbstractController
         private readonly RemoteCommandService $remoteCommandService,
         private readonly NodeRepository $nodeRepository,
     ) {
-    }
-
-    #[Route('/', name: 'index')]
-    public function index(): Response
-    {
-        $nodes = $this->nodeRepository->findAll();
-
-        return $this->render('@ServerCommand/terminal/index.html.twig', [
-            'nodes' => $nodes,
-        ]);
     }
 
     #[Route('/execute', name: 'execute', methods: ['POST'])]

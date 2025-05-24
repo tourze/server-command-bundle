@@ -229,24 +229,27 @@ class RemoteCommandService
      */
     private function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
     {
-        // 如果有工作目录，先切换到该目录
+        // 构建完整的命令，包括工作目录切换
+        $fullCommand = $command;
+
+        // 如果有工作目录，将cd命令和实际命令组合
         if ($workingDirectory !== null) {
-            $ssh->exec("cd {$workingDirectory}");
+            $fullCommand = "cd {$workingDirectory} && {$command}";
         }
 
         // 根据是否需要sudo执行不同的命令
         if ($useSudo) {
             if ($node && 'root' !== $node->getSshUser()) {
                 if ($node->getSshPassword()) {
-                    return $ssh->exec("echo '{$node->getSshPassword()}' | sudo -S {$command}");
+                    return $ssh->exec("echo '{$node->getSshPassword()}' | sudo -S {$fullCommand}");
                 } else {
-                    return $ssh->exec("sudo -S {$command}");
+                    return $ssh->exec("sudo -S {$fullCommand}");
                 }
             }
         }
 
         // 直接执行命令
-        return $ssh->exec($command);
+        return $ssh->exec($fullCommand);
     }
 
     /**
