@@ -1,0 +1,417 @@
+{% extends '@!EasyAdmin/layout.html.twig' %}
+
+{% block page_title %}服务器终端{% endblock %}
+
+{% block body_class %}page-terminal{% endblock %}
+
+{% block content_header %}
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-terminal"></i>
+            服务器终端
+        </h1>
+        <div class="page-actions">
+            <div class="dropdown">
+                <select id="server-select" class="form-control" style="width: 250px;">
+                    <option value="">请选择服务器</option>
+                    {% for node in nodes %}
+                        <option value="{{ node.id }}" 
+                                data-host="{{ node.sshHost }}" 
+                                data-port="{{ node.sshPort }}"
+                                data-user="{{ node.sshUser }}">
+                            {{ node.name }} ({{ node.sshHost }}:{{ node.sshPort }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block main %}
+    <div class="terminal-container">
+        <!-- 终端输出区域 -->
+        <div class="terminal-output" id="terminal-output">
+            <div class="terminal-welcome">
+                <p>欢迎使用服务器终端模拟器</p>
+                <p>请先选择一个服务器节点，然后在底部输入命令</p>
+            </div>
+        </div>
+
+        <!-- 命令输入区域 -->
+        <div class="terminal-input-container" id="terminal-input-container" style="display: none;">
+            <div class="terminal-input-line">
+                <span class="terminal-prompt" id="terminal-prompt">root@server:~$</span>
+                <input type="text" 
+                       id="command-input" 
+                       class="terminal-input" 
+                       placeholder="输入命令..."
+                       autocomplete="off">
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content_footer %}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .terminal-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', 'Monaco', monospace;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .terminal-output {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .terminal-welcome {
+            color: #00ff00;
+            margin-bottom: 20px;
+        }
+
+        .terminal-welcome p {
+            margin: 5px 0;
+        }
+
+        .terminal-input-container {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            border-top: 1px solid #404040;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            align-items: center;
+        }
+
+        .terminal-prompt {
+            color: #00ff00;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .terminal-input:focus {
+            outline: none;
+        }
+
+        .command-line {
+            margin: 5px 0;
+        }
+
+        .command-prompt {
+            color: #00ff00;
+        }
+
+        .command-text {
+            color: #ffffff;
+            margin-left: 10px;
+        }
+
+        .command-result {
+            color: #cccccc;
+            margin: 5px 0 15px 20px;
+            white-space: pre-wrap;
+        }
+
+        .command-error {
+            color: #ff4444;
+        }
+
+        .command-info {
+            color: #ffff00;
+            font-size: 12px;
+            margin-left: 20px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        #server-select {
+            min-width: 250px;
+        }
+
+        .loading {
+            color: #ffff00;
+        }
+
+        .terminal-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-output::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .terminal-output::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .terminal-output::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        class Terminal {
+            constructor() {
+                this.currentNodeId = null;
+                this.currentNodeInfo = null;
+                this.commandHistory = [];
+                this.historyIndex = -1;
+                
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.serverSelect = document.getElementById('server-select');
+                this.terminalOutput = document.getElementById('terminal-output');
+                this.terminalInputContainer = document.getElementById('terminal-input-container');
+                this.commandInput = document.getElementById('command-input');
+                this.terminalPrompt = document.getElementById('terminal-prompt');
+            }
+
+            bindEvents() {
+                // 服务器选择变化
+                this.serverSelect.addEventListener('change', (e) => {
+                    this.selectServer(e.target.value);
+                });
+
+                // 命令输入处理
+                this.commandInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.executeCommand();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        this.navigateHistory(-1);
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        this.navigateHistory(1);
+                    }
+                });
+            }
+
+            selectServer(nodeId) {
+                if (!nodeId) {
+                    this.currentNodeId = null;
+                    this.currentNodeInfo = null;
+                    this.terminalInputContainer.style.display = 'none';
+                    this.clearOutput();
+                    this.addLine('请选择一个服务器节点', 'terminal-welcome');
+                    return;
+                }
+
+                this.currentNodeId = nodeId;
+                const option = this.serverSelect.querySelector(`option[value="${nodeId}"]`);
+                this.currentNodeInfo = {
+                    host: option.dataset.host,
+                    port: option.dataset.port,
+                    user: option.dataset.user,
+                    name: option.textContent
+                };
+
+                this.updatePrompt();
+                this.terminalInputContainer.style.display = 'block';
+                this.clearOutput();
+                this.addLine(`已连接到: ${this.currentNodeInfo.name}`, 'command-info');
+                this.addLine('', '');
+                
+                // 加载历史命令
+                this.loadHistory();
+                
+                // 聚焦到输入框
+                setTimeout(() => {
+                    this.commandInput.focus();
+                }, 100);
+            }
+
+            updatePrompt() {
+                if (this.currentNodeInfo) {
+                    this.terminalPrompt.textContent = `${this.currentNodeInfo.user}@${this.currentNodeInfo.host}:~$`;
+                }
+            }
+
+            clearOutput() {
+                this.terminalOutput.innerHTML = '';
+            }
+
+            addLine(content, className = '') {
+                const line = document.createElement('div');
+                line.textContent = content;
+                if (className) {
+                    line.className = className;
+                }
+                this.terminalOutput.appendChild(line);
+                this.scrollToBottom();
+            }
+
+            addCommandLine(command, result, status, executionTime) {
+                // 显示命令
+                const commandLine = document.createElement('div');
+                commandLine.className = 'command-line';
+                commandLine.innerHTML = `<span class="command-prompt">${this.terminalPrompt.textContent}</span><span class="command-text">${this.escapeHtml(command)}</span>`;
+                this.terminalOutput.appendChild(commandLine);
+
+                // 显示结果
+                if (result) {
+                    const resultLine = document.createElement('div');
+                    resultLine.className = status === 'failed' ? 'command-result command-error' : 'command-result';
+                    resultLine.textContent = result;
+                    this.terminalOutput.appendChild(resultLine);
+                }
+
+                // 显示执行信息
+                if (executionTime !== null) {
+                    const infoLine = document.createElement('div');
+                    infoLine.className = 'command-info';
+                    infoLine.textContent = `[执行时间: ${executionTime.toFixed(3)}s, 状态: ${status}]`;
+                    this.terminalOutput.appendChild(infoLine);
+                }
+
+                this.scrollToBottom();
+            }
+
+            executeCommand() {
+                const command = this.commandInput.value.trim();
+                if (!command || !this.currentNodeId) {
+                    return;
+                }
+
+                // 添加到历史记录
+                this.commandHistory.unshift(command);
+                this.historyIndex = -1;
+
+                // 清空输入框
+                this.commandInput.value = '';
+
+                // 显示正在执行
+                this.addCommandLine(command, '正在执行...', 'running', null);
+
+                // 发送AJAX请求
+                fetch('{{ path('admin_terminal_execute') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        nodeId: this.currentNodeId,
+                        command: command,
+                        workingDir: '/root'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 移除"正在执行..."的行
+                    const lastLines = this.terminalOutput.children;
+                    if (lastLines.length >= 2) {
+                        this.terminalOutput.removeChild(lastLines[lastLines.length - 1]); // 移除结果行
+                    }
+
+                    if (data.success) {
+                        this.addCommandLine(command, data.result, data.status, data.executionTime);
+                    } else {
+                        this.addCommandLine(command, `错误: ${data.error}`, 'failed', null);
+                    }
+                })
+                .catch(error => {
+                    // 移除"正在执行..."的行
+                    const lastLines = this.terminalOutput.children;
+                    if (lastLines.length >= 2) {
+                        this.terminalOutput.removeChild(lastLines[lastLines.length - 1]);
+                    }
+                    this.addCommandLine(command, `网络错误: ${error.message}`, 'failed', null);
+                });
+            }
+
+            loadHistory() {
+                if (!this.currentNodeId) return;
+
+                fetch(`{{ path('admin_terminal_history', {nodeId: '__NODE_ID__'}) }}`.replace('__NODE_ID__', this.currentNodeId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.history.length > 0) {
+                        this.addLine('=== 历史命令 ===', 'command-info');
+                        data.history.reverse().forEach(cmd => {
+                            this.addCommandLine(cmd.command, cmd.result, cmd.status, cmd.executionTime);
+                        });
+                        this.addLine('=== 当前会话 ===', 'command-info');
+                    }
+                })
+                .catch(error => {
+                    console.error('加载历史命令失败:', error);
+                });
+            }
+
+            navigateHistory(direction) {
+                if (this.commandHistory.length === 0) return;
+
+                this.historyIndex += direction;
+                
+                if (this.historyIndex < -1) {
+                    this.historyIndex = -1;
+                } else if (this.historyIndex >= this.commandHistory.length) {
+                    this.historyIndex = this.commandHistory.length - 1;
+                }
+
+                if (this.historyIndex === -1) {
+                    this.commandInput.value = '';
+                } else {
+                    this.commandInput.value = this.commandHistory[this.historyIndex];
+                }
+            }
+
+            scrollToBottom() {
+                this.terminalOutput.scrollTop = this.terminalOutput.scrollHeight;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // 初始化终端
+        document.addEventListener('DOMContentLoaded', function() {
+            new Terminal();
+        });
+    </script>
+{% endblock %}

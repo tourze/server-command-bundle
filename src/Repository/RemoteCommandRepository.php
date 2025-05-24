@@ -63,4 +63,20 @@ class RemoteCommandRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * 查找指定节点的终端命令历史
+     */
+    public function findTerminalCommandsByNode(Node $node, int $limit = 20): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.node = :node')
+            ->andWhere('c.tags LIKE :terminal_tag')
+            ->setParameter('node', $node)
+            ->setParameter('terminal_tag', '%terminal%')
+            ->orderBy('c.createTime', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }

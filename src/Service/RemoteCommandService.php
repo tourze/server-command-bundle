@@ -4,6 +4,7 @@ namespace ServerCommandBundle\Service;
 
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SSH2;
 use Psr\Log\LoggerInterface;
 use SebastianBergmann\Timer\Timer;
@@ -88,12 +89,68 @@ class RemoteCommandService
     private function initializeSshConnection(Node $node): SSH2
     {
         $ssh = new SSH2($node->getSshHost(), $node->getSshPort());
-        if (!$ssh->login($node->getSshUser(), $node->getSshPassword())) {
-            throw new \RuntimeException('SSH连接失败: 无法登录');
+
+        $loginSuccess = false;
+        $authMethod = '';
+
+        // 优先尝试私钥认证
+        if ($node->getSshPrivateKey()) {
+            try {
+                $key = PublicKeyLoader::load($node->getSshPrivateKey());
+                if ($ssh->login($node->getSshUser(), $key)) {
+                    $loginSuccess = true;
+                    $authMethod = '私钥认证';
+                    $this->logger->info('SSH私钥认证成功', [
+                        'host' => $node->getSshHost(),
+                        'port' => $node->getSshPort(),
+                        'user' => $node->getSshUser(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $this->logger->warning('SSH私钥认证失败，尝试密码认证', [
+                    'host' => $node->getSshHost(),
+                    'port' => $node->getSshPort(),
+                    'user' => $node->getSshUser(),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // 如果私钥认证失败或没有私钥，尝试密码认证
+        if (!$loginSuccess && $node->getSshPassword()) {
+            if ($ssh->login($node->getSshUser(), $node->getSshPassword())) {
+                $loginSuccess = true;
+                $authMethod = '密码认证';
+                $this->logger->info('SSH密码认证成功', [
+                    'host' => $node->getSshHost(),
+                    'port' => $node->getSshPort(),
+                    'user' => $node->getSshUser(),
+                ]);
+            }
+        }
+
+        // 如果所有认证方式都失败
+        if (!$loginSuccess) {
+            $error = 'SSH连接失败: 私钥和密码认证均失败';
+            $this->logger->error($error, [
+                'host' => $node->getSshHost(),
+                'port' => $node->getSshPort(),
+                'user' => $node->getSshUser(),
+                'hasPrivateKey' => !empty($node->getSshPrivateKey()),
+                'hasPassword' => !empty($node->getSshPassword()),
+            ]);
+            throw new \RuntimeException($error);
         }
 
         // 设置超时为0（无超时）
         $ssh->setTimeout(0);
+
+        $this->logger->debug('SSH连接建立成功', [
+            'host' => $node->getSshHost(),
+            'port' => $node->getSshPort(),
+            'user' => $node->getSshUser(),
+            'authMethod' => $authMethod,
+        ]);
 
         return $ssh;
     }
@@ -320,5 +377,13 @@ class RemoteCommandService
         }
 
         return $command;
+    }
+
+    /**
+     * 获取Repository实例
+     */
+    public function getRepository(): RemoteCommandRepository
+    {
+        return $this->remoteCommandRepository;
     }
 }
