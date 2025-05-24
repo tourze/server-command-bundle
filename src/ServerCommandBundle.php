@@ -11,6 +11,7 @@ class ServerCommandBundle extends Bundle implements BundleDependencyInterface
     {
         return [
             \Tourze\RoutingAutoLoaderBundle\RoutingAutoLoaderBundle::class => ['all' => true],
+            \Tourze\ScheduleEntityCleanBundle\ScheduleEntityCleanBundle::class => ['all' => true],
             \ServerNodeBundle\ServerNodeBundle::class => ['all' => true],
         ];
     }

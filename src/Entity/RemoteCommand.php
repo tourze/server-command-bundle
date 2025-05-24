@@ -14,7 +14,9 @@ use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
 use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
 use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
 use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
+use Tourze\ScheduleEntityCleanBundle\Attribute\AsScheduleClean;
 
+#[AsScheduleClean(expression: '0 5 * * *', defaultKeepDay: 60, keepDayEnv: 'SERVER_COMMAND_LOG_PERSIST_DAY_NUM')]
 #[AsPermission(title: '远程命令')]
 #[ORM\Entity(repositoryClass: RemoteCommandRepository::class)]
 #[ORM\Table(name: 'ims_server_remote_command', options: ['comment' => '远程命令'])]
