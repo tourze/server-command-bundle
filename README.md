@@ -265,17 +265,6 @@ server_command_terminal:
     prefix: /admin/terminal
 ```
 
-## 权限配置
-
-终端功能默认需要管理员权限。可以通过Symfony的安全配置来控制访问权限：
-
-```yaml
-# config/packages/security.yaml
-security:
-    access_control:
-        - { path: ^/admin/terminal, roles: ROLE_ADMIN }
-```
-
 ## 注意事项
 
 - 终端执行的命令默认超时时间为30秒
