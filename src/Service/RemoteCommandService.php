@@ -84,75 +84,147 @@ class RemoteCommandService
     }
 
     /**
+     * 使用密码凭证创建SSH连接
+     */
+    public function connectWithPassword(string $host, int $port, string $user, string $password): SSH2
+    {
+        $ssh = $this->createBasicSshConnection($host, $port);
+
+        if (!$ssh->login($user, $password)) {
+            $error = 'SSH连接失败: 密码认证失败';
+            $this->logger->error($error, [
+                'host' => $host,
+                'port' => $port,
+                'user' => $user,
+            ]);
+            throw new \RuntimeException($error);
+        }
+
+        $this->logger->info('SSH密码认证成功', [
+            'host' => $host,
+            'port' => $port,
+            'user' => $user,
+        ]);
+
+        $this->configureSshConnection($ssh, $host, $port, $user, '密码认证');
+
+        return $ssh;
+    }
+
+    /**
+     * 使用私钥凭证创建SSH连接
+     */
+    public function connectWithPrivateKey(string $host, int $port, string $user, string $privateKey): SSH2
+    {
+        $ssh = $this->createBasicSshConnection($host, $port);
+
+        try {
+            $key = PublicKeyLoader::load($privateKey);
+            if (!$ssh->login($user, $key)) {
+                $error = 'SSH连接失败: 私钥认证失败';
+                $this->logger->error($error, [
+                    'host' => $host,
+                    'port' => $port,
+                    'user' => $user,
+                ]);
+                throw new \RuntimeException($error);
+            }
+
+            $this->logger->info('SSH私钥认证成功', [
+                'host' => $host,
+                'port' => $port,
+                'user' => $user,
+            ]);
+
+            $this->configureSshConnection($ssh, $host, $port, $user, '私钥认证');
+
+            return $ssh;
+        } catch (\Exception $e) {
+            $error = 'SSH连接失败: 私钥加载或认证失败';
+            $this->logger->error($error, [
+                'host' => $host,
+                'port' => $port,
+                'user' => $user,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \RuntimeException($error, 0, $e);
+        }
+    }
+
+    /**
      * 初始化SSH连接
      */
     private function initializeSshConnection(Node $node): SSH2
     {
-        $ssh = new SSH2($node->getSshHost(), $node->getSshPort());
-
-        $loginSuccess = false;
-        $authMethod = '';
+        $host = $node->getSshHost();
+        $port = $node->getSshPort();
+        $user = $node->getSshUser();
+        $privateKey = $node->getSshPrivateKey();
+        $password = $node->getSshPassword();
 
         // 优先尝试私钥认证
-        if ($node->getSshPrivateKey()) {
+        if ($privateKey) {
             try {
-                $key = PublicKeyLoader::load($node->getSshPrivateKey());
-                if ($ssh->login($node->getSshUser(), $key)) {
-                    $loginSuccess = true;
-                    $authMethod = '私钥认证';
-                    $this->logger->info('SSH私钥认证成功', [
-                        'host' => $node->getSshHost(),
-                        'port' => $node->getSshPort(),
-                        'user' => $node->getSshUser(),
-                    ]);
-                }
+                return $this->connectWithPrivateKey($host, $port, $user, $privateKey);
             } catch (\Exception $e) {
                 $this->logger->warning('SSH私钥认证失败，尝试密码认证', [
-                    'host' => $node->getSshHost(),
-                    'port' => $node->getSshPort(),
-                    'user' => $node->getSshUser(),
+                    'host' => $host,
+                    'port' => $port,
+                    'user' => $user,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
 
         // 如果私钥认证失败或没有私钥，尝试密码认证
-        if (!$loginSuccess && $node->getSshPassword()) {
-            if ($ssh->login($node->getSshUser(), $node->getSshPassword())) {
-                $loginSuccess = true;
-                $authMethod = '密码认证';
-                $this->logger->info('SSH密码认证成功', [
-                    'host' => $node->getSshHost(),
-                    'port' => $node->getSshPort(),
-                    'user' => $node->getSshUser(),
+        if ($password) {
+            try {
+                return $this->connectWithPassword($host, $port, $user, $password);
+            } catch (\Exception $e) {
+                // 密码认证也失败了，记录错误并抛出异常
+                $this->logger->error('SSH密码认证也失败', [
+                    'host' => $host,
+                    'port' => $port,
+                    'user' => $user,
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
 
         // 如果所有认证方式都失败
-        if (!$loginSuccess) {
-            $error = 'SSH连接失败: 私钥和密码认证均失败';
-            $this->logger->error($error, [
-                'host' => $node->getSshHost(),
-                'port' => $node->getSshPort(),
-                'user' => $node->getSshUser(),
-                'hasPrivateKey' => !empty($node->getSshPrivateKey()),
-                'hasPassword' => !empty($node->getSshPassword()),
-            ]);
-            throw new \RuntimeException($error);
-        }
+        $error = 'SSH连接失败: 私钥和密码认证均失败';
+        $this->logger->error($error, [
+            'host' => $host,
+            'port' => $port,
+            'user' => $user,
+            'hasPrivateKey' => !empty($privateKey),
+            'hasPassword' => !empty($password),
+        ]);
+        throw new \RuntimeException($error);
+    }
 
+    /**
+     * 创建基础SSH连接对象
+     */
+    private function createBasicSshConnection(string $host, int $port): SSH2
+    {
+        return new SSH2($host, $port);
+    }
+
+    /**
+     * 配置SSH连接
+     */
+    private function configureSshConnection(SSH2 $ssh, string $host, int $port, string $user, string $authMethod): void
+    {
         // 设置超时为0（无超时）
         $ssh->setTimeout(0);
 
         $this->logger->debug('SSH连接建立成功', [
-            'host' => $node->getSshHost(),
-            'port' => $node->getSshPort(),
-            'user' => $node->getSshUser(),
+            'host' => $host,
+            'port' => $port,
+            'user' => $user,
             'authMethod' => $authMethod,
         ]);
-
-        return $ssh;
     }
 
     /**
