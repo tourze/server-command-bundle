@@ -299,7 +299,7 @@ class RemoteCommandService
     /**
      * 执行SSH命令
      */
-    private function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
+    public function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
     {
         // 构建完整的命令，包括工作目录切换
         $fullCommand = $command;
