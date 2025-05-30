@@ -2,7 +2,7 @@
 
 namespace ServerCommandBundle\Service\Quick;
 
-use ServerCommandBundle\Contracts\ProgessModel;
+use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Service\RemoteCommandService;
@@ -21,7 +21,7 @@ class DockerEnvironmentService
     /**
      * 检查Docker环境
      */
-    public function checkDockerEnvironment(ProgessModel $deployTask, Node $node): void
+    public function checkDockerEnvironment(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->setProgress(5);
         $deployTask->appendLog('检查Docker环境');
@@ -80,7 +80,7 @@ class DockerEnvironmentService
     /**
      * 在Linux系统上安装Docker
      */
-    private function installDockerOnLinux(ProgessModel $deployTask, Node $node): void
+    private function installDockerOnLinux(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->setProgress(7);
         $deployTask->appendLog('开始在Linux系统安装Docker...');
@@ -204,7 +204,7 @@ class DockerEnvironmentService
     /**
      * 启动Docker服务
      */
-    private function startDockerService(ProgessModel $deployTask, Node $node): void
+    private function startDockerService(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('启动Docker服务...');
 
@@ -279,7 +279,7 @@ class DockerEnvironmentService
     /**
      * 启动服务后验证Docker
      */
-    private function verifyDockerAfterStart(ProgessModel $deployTask, Node $node): void
+    private function verifyDockerAfterStart(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('重新验证Docker服务...');
         
@@ -307,7 +307,7 @@ class DockerEnvironmentService
     /**
      * 处理命令执行结果
      */
-    private function handleCommandResult(RemoteCommand $command, ProgessModel $deployTask, string $stepName): void
+    private function handleCommandResult(RemoteCommand $command, ProgressModel $deployTask, string $stepName): void
     {
         $result = $command->getResult() ?? '';
         $status = $command->getStatus();

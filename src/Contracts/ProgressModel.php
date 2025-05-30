@@ -2,7 +2,9 @@
 
 namespace ServerCommandBundle\Contracts;
 
-interface ProgessModel
+interface ProgressModel
 {
+    public function setProgress(?int $progress): static;
+
     public function appendLog(string $log): static;
 }

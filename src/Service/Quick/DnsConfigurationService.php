@@ -2,7 +2,7 @@
 
 namespace ServerCommandBundle\Service\Quick;
 
-use ServerCommandBundle\Contracts\ProgessModel;
+use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
@@ -20,7 +20,7 @@ class DnsConfigurationService
     /**
      * 检测并修复DNS污染问题
      */
-    public function checkAndFixDns(ProgessModel $deployTask, Node $node): void
+    public function checkAndFixDns(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('检测DNS污染情况...');
 
@@ -58,7 +58,7 @@ class DnsConfigurationService
     /**
      * 执行DNS测试
      */
-    private function performDnsTest(ProgessModel $deployTask, Node $node): string
+    private function performDnsTest(ProgressModel $deployTask, Node $node): string
     {
         $dnsTestCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -80,7 +80,7 @@ class DnsConfigurationService
     /**
      * 使用Google DNS测试
      */
-    private function performGoogleDnsTest(ProgessModel $deployTask, Node $node): string
+    private function performGoogleDnsTest(ProgressModel $deployTask, Node $node): string
     {
         $googleDnsTestCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -102,7 +102,7 @@ class DnsConfigurationService
     /**
      * 分析DNS测试结果
      */
-    private function analyzeDnsTestResults(ProgessModel $deployTask, string $dnsResult, string $googleDnsResult): bool
+    private function analyzeDnsTestResults(ProgressModel $deployTask, string $dnsResult, string $googleDnsResult): bool
     {
         if ($dnsResult === 'DNS_FAILED' || empty($dnsResult)) {
             $deployTask->appendLog('检测到DNS解析失败');
@@ -120,7 +120,7 @@ class DnsConfigurationService
     /**
      * 测试解析出的IP是否能正常连接Docker Hub
      */
-    private function testDockerHubConnectivity(ProgessModel $deployTask, Node $node, string $resolvedIp): bool
+    private function testDockerHubConnectivity(ProgressModel $deployTask, Node $node, string $resolvedIp): bool
     {
         $deployTask->appendLog("测试解析IP {$resolvedIp} 的连通性...");
         
@@ -149,7 +149,7 @@ class DnsConfigurationService
     /**
      * 测试Docker Hub连接
      */
-    private function testDockerHubConnection(ProgessModel $deployTask, Node $node): bool
+    private function testDockerHubConnection(ProgressModel $deployTask, Node $node): bool
     {
         $connectTestCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -176,7 +176,7 @@ class DnsConfigurationService
     /**
      * 修复DNS配置
      */
-    private function fixDnsConfiguration(ProgessModel $deployTask, Node $node): void
+    private function fixDnsConfiguration(ProgressModel $deployTask, Node $node): void
     {
         // 备份原有DNS配置
         $this->backupDnsConfiguration($deployTask, $node);
@@ -211,7 +211,7 @@ class DnsConfigurationService
     /**
      * 备份DNS配置
      */
-    private function backupDnsConfiguration(ProgessModel $deployTask, Node $node): void
+    private function backupDnsConfiguration(ProgressModel $deployTask, Node $node): void
     {
         $backupDnsCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -230,7 +230,7 @@ class DnsConfigurationService
     /**
      * 检查systemd-resolved状态
      */
-    private function checkSystemdResolvedStatus(ProgessModel $deployTask, Node $node): string
+    private function checkSystemdResolvedStatus(ProgressModel $deployTask, Node $node): string
     {
         $checkSystemdCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -252,7 +252,7 @@ class DnsConfigurationService
     /**
      * 使用systemd-resolved配置DNS
      */
-    private function configureSystemdResolvedDns(ProgessModel $deployTask, Node $node): void
+    private function configureSystemdResolvedDns(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('使用systemd-resolved配置DNS...');
 
@@ -280,7 +280,7 @@ class DnsConfigurationService
     /**
      * 检查当前DNS状态
      */
-    private function checkCurrentDnsStatus(ProgessModel $deployTask, Node $node): void
+    private function checkCurrentDnsStatus(ProgressModel $deployTask, Node $node): void
     {
         $statusCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -300,7 +300,7 @@ class DnsConfigurationService
     /**
      * 使用resolvectl直接配置DNS
      */
-    private function configureUsingResolvectl(ProgessModel $deployTask, Node $node): bool
+    private function configureUsingResolvectl(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('尝试使用resolvectl直接配置DNS...');
 
@@ -377,7 +377,7 @@ class DnsConfigurationService
     /**
      * 创建systemd-resolved配置文件
      */
-    private function createSystemdResolvedConfigFile(ProgessModel $deployTask, Node $node): void
+    private function createSystemdResolvedConfigFile(ProgressModel $deployTask, Node $node): void
     {
         // 创建systemd-resolved配置目录
         $this->createSystemdResolvedDirectory($deployTask, $node);
@@ -389,7 +389,7 @@ class DnsConfigurationService
     /**
      * 创建systemd-resolved配置目录
      */
-    private function createSystemdResolvedDirectory(ProgessModel $deployTask, Node $node): void
+    private function createSystemdResolvedDirectory(ProgressModel $deployTask, Node $node): void
     {
         $createDirCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -425,7 +425,7 @@ class DnsConfigurationService
     /**
      * 创建systemd-resolved配置文件
      */
-    private function createSystemdResolvedConfig(ProgessModel $deployTask, Node $node): void
+    private function createSystemdResolvedConfig(ProgressModel $deployTask, Node $node): void
     {
         $configResolvedCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -461,7 +461,7 @@ EOF',
     /**
      * 重启systemd-resolved服务
      */
-    private function restartSystemdResolved(ProgessModel $deployTask, Node $node): void
+    private function restartSystemdResolved(ProgressModel $deployTask, Node $node): void
     {
         $restartResolvedCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -483,7 +483,7 @@ EOF',
     /**
      * 验证配置并刷新systemd-resolved
      */
-    private function verifyAndFlushSystemdResolved(ProgessModel $deployTask, Node $node): void
+    private function verifyAndFlushSystemdResolved(ProgressModel $deployTask, Node $node): void
     {
         // 刷新DNS缓存
         $flushCommand = $this->remoteCommandService->createCommand(
@@ -521,7 +521,7 @@ EOF',
     /**
      * 传统方式配置DNS
      */
-    private function configureTraditionalDns(ProgessModel $deployTask, Node $node): void
+    private function configureTraditionalDns(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('使用传统方式配置DNS...');
 
@@ -544,7 +544,7 @@ EOF',
     /**
      * 准备resolv.conf文件
      */
-    private function prepareResolveConf(ProgessModel $deployTask, Node $node): void
+    private function prepareResolveConf(ProgressModel $deployTask, Node $node): void
     {
         // 移除immutable属性（如果存在）
         $removeImmutableCommand = $this->remoteCommandService->createCommand(
@@ -578,7 +578,7 @@ EOF',
     /**
      * 尝试直接创建resolv.conf
      */
-    private function tryCreateResolveConf(ProgessModel $deployTask, Node $node): bool
+    private function tryCreateResolveConf(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('尝试直接创建DNS配置...');
         
@@ -615,7 +615,7 @@ EOF',
     /**
      * 保护resolv.conf文件
      */
-    private function protectResolveConf(ProgessModel $deployTask, Node $node): void
+    private function protectResolveConf(ProgressModel $deployTask, Node $node): void
     {
         $setImmutableCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -634,7 +634,7 @@ EOF',
     /**
      * 使用临时文件创建resolv.conf
      */
-    private function tryCreateResolveConfWithTemp(ProgessModel $deployTask, Node $node): bool
+    private function tryCreateResolveConfWithTemp(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('使用临时文件创建DNS配置...');
         
@@ -668,7 +668,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 配置Docker daemon DNS
      */
-    private function configureDockerDns(ProgessModel $deployTask, Node $node): bool
+    private function configureDockerDns(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('配置Docker daemon DNS设置...');
         
@@ -692,7 +692,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 确保Docker配置目录存在
      */
-    private function ensureDockerConfigDirectory(ProgessModel $deployTask, Node $node): void
+    private function ensureDockerConfigDirectory(ProgressModel $deployTask, Node $node): void
     {
         $createDirCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -710,7 +710,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 更新Docker daemon配置
      */
-    private function updateDockerDaemonConfig(ProgessModel $deployTask, Node $node): void
+    private function updateDockerDaemonConfig(ProgressModel $deployTask, Node $node): void
     {
         // 检查现有Docker配置
         $checkDockerConfigCommand = $this->remoteCommandService->createCommand(
@@ -754,7 +754,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 重启Docker应用DNS配置
      */
-    private function restartDockerForDns(ProgessModel $deployTask, Node $node): void
+    private function restartDockerForDns(ProgressModel $deployTask, Node $node): void
     {
         $restartDockerCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -773,7 +773,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 刷新DNS缓存
      */
-    private function flushDnsCache(ProgessModel $deployTask, Node $node): void
+    private function flushDnsCache(ProgressModel $deployTask, Node $node): void
     {
         $flushDnsCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -792,7 +792,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 验证DNS配置
      */
-    private function verifyDnsConfiguration(ProgessModel $deployTask, Node $node): void
+    private function verifyDnsConfiguration(ProgressModel $deployTask, Node $node): void
     {
         $verifyDnsCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -840,7 +840,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     /**
      * 修复后验证DNS配置
      */
-    private function verifyDnsAfterFix(ProgessModel $deployTask, Node $node): void
+    private function verifyDnsAfterFix(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('验证DNS修复效果...');
         
