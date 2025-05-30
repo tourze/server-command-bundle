@@ -4,6 +4,7 @@ namespace ServerCommandBundle\Service;
 
 use Knp\Menu\ItemInterface;
 use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Entity\RemoteFileTransfer;
 use Tourze\EasyAdminMenuBundle\Service\LinkGeneratorInterface;
 use Tourze\EasyAdminMenuBundle\Service\MenuProviderInterface;
 
@@ -26,5 +27,10 @@ class AdminMenu implements MenuProviderInterface
         $serverMenu->addChild('远程命令')
             ->setUri($this->linkGenerator->getCurdListPage(RemoteCommand::class))
             ->setAttribute('icon', 'fas fa-cogs');
+
+        // 新增的文件传输菜单
+        $serverMenu->addChild('文件传输')
+            ->setUri($this->linkGenerator->getCurdListPage(RemoteFileTransfer::class))
+            ->setAttribute('icon', 'fas fa-upload');
     }
 }
