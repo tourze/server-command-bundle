@@ -173,6 +173,48 @@
             color: #666;
         }
 
+        .sudo-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            color: #ffffff;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sudo-checkbox {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #555;
+            border-radius: 3px;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .sudo-checkbox:checked {
+            background: #00ff00;
+            border-color: #00ff00;
+        }
+
+        .sudo-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 1px;
+            color: #000000;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .sudo-text {
+            color: #feca57;
+            font-weight: 500;
+        }
+
         .command-line {
             margin: 8px 0;
         }
@@ -461,6 +503,10 @@
                                class="terminal-input" 
                                placeholder="输入命令..."
                                autocomplete="off">
+                        <label class="sudo-checkbox-label">
+                            <input type="checkbox" id="sudo-checkbox" class="sudo-checkbox">
+                            <span class="sudo-text">sudo</span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -488,6 +534,7 @@
                 this.terminalPrompt = document.getElementById('terminal-prompt');
                 this.workingDirInput = document.getElementById('working-dir-input');
                 this.dirButtons = document.querySelectorAll('.dir-btn');
+                this.sudoCheckbox = document.getElementById('sudo-checkbox');
             }
 
             bindEvents() {
@@ -655,6 +702,9 @@
                     return;
                 }
 
+                // 记录是否使用sudo
+                const useSudo = this.sudoCheckbox.checked;
+
                 // 添加到历史记录
                 this.commandHistory.unshift(command);
                 this.historyIndex = -1;
@@ -678,7 +728,8 @@
                     body: new URLSearchParams({
                         nodeId: this.currentNodeId,
                         command: command,
-                        workingDir: this.currentWorkingDir
+                        workingDir: this.currentWorkingDir,
+                        useSudo: useSudo
                     })
                 })
                 .then(response => response.json())
@@ -689,9 +740,12 @@
                     }
 
                     if (data.success) {
-                        this.addCommandLine(command, data.result, data.status, data.executionTime);
+                        // 显示的命令包含sudo前缀（如果使用）
+                        const displayCommand = useSudo ? `sudo ${command}` : command;
+                        this.addCommandLine(displayCommand, data.result, data.status, data.executionTime);
                     } else {
-                        this.addCommandLine(command, `错误: ${data.error}`, 'failed', null);
+                        const displayCommand = useSudo ? `sudo ${command}` : command;
+                        this.addCommandLine(displayCommand, `错误: ${data.error}`, 'failed', null);
                     }
                 })
                 .catch(error => {
@@ -699,7 +753,8 @@
                     if (this.terminalOutput.contains(loadingLine)) {
                         this.terminalOutput.removeChild(loadingLine);
                     }
-                    this.addCommandLine(command, `网络错误: ${error.message}`, 'failed', null);
+                    const displayCommand = useSudo ? `sudo ${command}` : command;
+                    this.addCommandLine(displayCommand, `网络错误: ${error.message}`, 'failed', null);
                 });
             }
 

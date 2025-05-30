@@ -3,6 +3,7 @@
 namespace ServerCommandBundle\Tests\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use ServerCommandBundle\Entity\RemoteCommand;
@@ -16,10 +17,10 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class RemoteCommandServiceTest extends TestCase
 {
-    private RemoteCommandRepository $repository;
-    private EntityManagerInterface $entityManager;
-    private LoggerInterface $logger;
-    private MessageBusInterface $messageBus;
+    private RemoteCommandRepository|MockObject $repository;
+    private EntityManagerInterface|MockObject $entityManager;
+    private LoggerInterface|MockObject $logger;
+    private MessageBusInterface|MockObject $messageBus;
     private RemoteCommandService $service;
 
     protected function setUp(): void
@@ -252,5 +253,75 @@ class RemoteCommandServiceTest extends TestCase
 
         // 验证结果
         $this->assertSame($command, $result);
+    }
+
+    public function testExecSshCommandWithSudoAndWorkingDirectory(): void
+    {
+        // 创建模拟的SSH2连接
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        
+        // 创建模拟的节点
+        $node = $this->createMock(Node::class);
+        $node->method('getSshUser')->willReturn('parallels');
+        $node->method('getSshPassword')->willReturn('password123');
+        
+        // 设置期望的SSH命令执行
+        $expectedCommand = "printf '%s\\n\\n' 'password123' | sudo -S bash -c 'cd /var/www && pwd'";
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($expectedCommand)
+            ->willReturn('/var/www');
+        
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, 'pwd', '/var/www', true, $node);
+        
+        // 验证结果
+        $this->assertEquals('/var/www', $result);
+    }
+
+    public function testExecSshCommandWithSudoWithoutWorkingDirectory(): void
+    {
+        // 创建模拟的SSH2连接
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        
+        // 创建模拟的节点
+        $node = $this->createMock(Node::class);
+        $node->method('getSshUser')->willReturn('parallels');
+        $node->method('getSshPassword')->willReturn('password123');
+        
+        // 设置期望的SSH命令执行
+        $expectedCommand = "printf '%s\\n\\n' 'password123' | sudo -S systemctl restart nginx";
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($expectedCommand)
+            ->willReturn('nginx restarted successfully');
+        
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, 'systemctl restart nginx', null, true, $node);
+        
+        // 验证结果
+        $this->assertEquals('nginx restarted successfully', $result);
+    }
+
+    public function testExecSshCommandWithoutSudo(): void
+    {
+        // 创建模拟的SSH2连接
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        
+        // 创建模拟的节点
+        $node = $this->createMock(Node::class);
+        
+        // 设置期望的SSH命令执行
+        $expectedCommand = "cd /var/www && ls -la";
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($expectedCommand)
+            ->willReturn('total 0');
+        
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, 'ls -la', '/var/www', false, $node);
+        
+        // 验证结果
+        $this->assertEquals('total 0', $result);
     }
 } 

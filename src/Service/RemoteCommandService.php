@@ -297,31 +297,41 @@ class RemoteCommandService
     }
 
     /**
-     * 执行SSH命令
+     * 在SSH连接上执行命令
      */
     public function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
     {
-        // 构建完整的命令，包括工作目录切换
-        $fullCommand = $command;
-
-        // 如果有工作目录，将cd命令和实际命令组合
-        if ($workingDirectory !== null) {
-            $fullCommand = "cd {$workingDirectory} && {$command}";
-        }
-
         // 根据是否需要sudo执行不同的命令
-        if ($useSudo) {
-            if ($node && 'root' !== $node->getSshUser()) {
+        if ($useSudo && $node && 'root' !== $node->getSshUser()) {
+            // 使用sudo执行命令，通过shell -c来处理工作目录
+            if ($workingDirectory !== null) {
+                // 使用bash -c来组合cd和命令，然后用sudo执行
+                $shellCommand = "cd {$workingDirectory} && {$command}";
                 if ($node->getSshPassword()) {
-                    return $ssh->exec("echo '{$node->getSshPassword()}' | sudo -S {$fullCommand}");
+                    return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S bash -c " . escapeshellarg($shellCommand));
                 } else {
-                    return $ssh->exec("sudo -S {$fullCommand}");
+                    return $ssh->exec("sudo -S bash -c " . escapeshellarg($shellCommand));
+                }
+            } else {
+                // 没有工作目录时直接sudo执行命令
+                if ($node->getSshPassword()) {
+                    return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S {$command}");
+                } else {
+                    return $ssh->exec("sudo -S {$command}");
                 }
             }
-        }
+        } else {
+            // 不使用sudo时的正常执行
+            $fullCommand = $command;
 
-        // 直接执行命令
-        return $ssh->exec($fullCommand);
+            // 如果有工作目录，将cd命令和实际命令组合
+            if ($workingDirectory !== null) {
+                $fullCommand = "cd {$workingDirectory} && {$command}";
+            }
+
+            // 直接执行命令
+            return $ssh->exec($fullCommand);
+        }
     }
 
     /**

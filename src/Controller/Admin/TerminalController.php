@@ -24,6 +24,7 @@ class TerminalController extends AbstractController
         $nodeId = $request->request->get('nodeId');
         $command = $request->request->get('command');
         $workingDir = $request->request->get('workingDir', '/root');
+        $useSudo = filter_var($request->request->get('useSudo', 'false'), FILTER_VALIDATE_BOOLEAN);
 
         if (!$nodeId || !$command) {
             return new JsonResponse([
@@ -47,7 +48,7 @@ class TerminalController extends AbstractController
                 '终端命令: ' . substr($command, 0, 50),
                 $command,
                 $workingDir,
-                false, // 默认不使用sudo
+                $useSudo, // 使用从请求获取的sudo参数
                 30, // 30秒超时
                 ['terminal']
             );
@@ -101,4 +102,4 @@ class TerminalController extends AbstractController
             'history' => $history,
         ]);
     }
-} 
+}

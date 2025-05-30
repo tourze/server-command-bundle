@@ -2,6 +2,7 @@
 
 namespace ServerCommandBundle\Tests\Controller;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ServerCommandBundle\Controller\Admin\TerminalController;
 use ServerCommandBundle\Entity\RemoteCommand;
@@ -14,8 +15,8 @@ use Twig\Environment;
 
 class TerminalControllerTest extends TestCase
 {
-    private RemoteCommandService $remoteCommandService;
-    private NodeRepository $nodeRepository;
+    private RemoteCommandService|MockObject $remoteCommandService;
+    private NodeRepository|MockObject $nodeRepository;
     private TerminalController $controller;
 
     protected function setUp(): void
@@ -39,6 +40,7 @@ class TerminalControllerTest extends TestCase
         $nodeId = '1';
         $command = 'ls -la';
         $workingDir = '/root';
+        $useSudo = false;
 
         $node = $this->createMock(Node::class);
         $remoteCommand = $this->createMock(RemoteCommand::class);
@@ -47,6 +49,7 @@ class TerminalControllerTest extends TestCase
         $request->request->set('nodeId', $nodeId);
         $request->request->set('command', $command);
         $request->request->set('workingDir', $workingDir);
+        $request->request->set('useSudo', $useSudo);
 
         // 设置模拟对象的行为
         $this->nodeRepository->expects($this->once())
@@ -180,5 +183,65 @@ class TerminalControllerTest extends TestCase
         $data = json_decode($response->getContent(), true);
         $this->assertFalse($data['success']);
         $this->assertEquals('节点不存在', $data['error']);
+    }
+
+    public function testExecuteWithSudoParameter(): void
+    {
+        // 准备测试数据
+        $nodeId = '1';
+        $command = 'systemctl restart nginx';
+        $workingDir = '/root';
+        $useSudo = true;
+
+        $node = $this->createMock(Node::class);
+        $remoteCommand = $this->createMock(RemoteCommand::class);
+
+        $request = new Request();
+        $request->request->set('nodeId', $nodeId);
+        $request->request->set('command', $command);
+        $request->request->set('workingDir', $workingDir);
+        $request->request->set('useSudo', 'true');
+
+        // 设置模拟对象的行为
+        $this->nodeRepository->expects($this->once())
+            ->method('find')
+            ->with($nodeId)
+            ->willReturn($node);
+
+        $this->remoteCommandService->expects($this->once())
+            ->method('createCommand')
+            ->willReturn($remoteCommand);
+
+        $this->remoteCommandService->expects($this->once())
+            ->method('executeCommand')
+            ->with($remoteCommand);
+
+        $remoteCommand->expects($this->once())
+            ->method('getResult')
+            ->willReturn('nginx restarted successfully');
+
+        $remoteCommand->expects($this->once())
+            ->method('getStatus')
+            ->willReturn(CommandStatus::COMPLETED);
+
+        $remoteCommand->expects($this->once())
+            ->method('getExecutionTime')
+            ->willReturn(2.5);
+
+        $remoteCommand->expects($this->once())
+            ->method('getId')
+            ->willReturn(456);
+
+        // 执行测试
+        $response = $this->controller->execute($request);
+
+        // 验证结果
+        $this->assertEquals(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertTrue($data['success']);
+        $this->assertEquals('nginx restarted successfully', $data['result']);
+        $this->assertEquals('completed', $data['status']);
+        $this->assertEquals(2.5, $data['executionTime']);
+        $this->assertEquals(456, $data['commandId']);
     }
 } 
