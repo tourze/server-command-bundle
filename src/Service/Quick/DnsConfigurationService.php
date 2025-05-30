@@ -67,7 +67,7 @@ class DnsConfigurationService
             null,
             false,
             10,
-            ['ssr_deploy', 'dns_test']
+            ['dns_test']
         );
 
         $this->remoteCommandService->executeCommand($dnsTestCommand);
@@ -89,7 +89,7 @@ class DnsConfigurationService
             null,
             false,
             10,
-            ['ssr_deploy', 'google_dns_test']
+            ['google_dns_test']
         );
 
         $this->remoteCommandService->executeCommand($googleDnsTestCommand);
@@ -131,7 +131,7 @@ class DnsConfigurationService
             null,
             false,
             15,
-            ['ssr_deploy', 'test_ip_connectivity']
+            ['test_ip_connectivity']
         );
 
         $this->remoteCommandService->executeCommand($connectTestCommand);
@@ -158,7 +158,7 @@ class DnsConfigurationService
             null,
             false,
             10,
-            ['ssr_deploy', 'docker_hub_test']
+            ['docker_hub_test']
         );
 
         $this->remoteCommandService->executeCommand($connectTestCommand);
@@ -220,7 +220,7 @@ class DnsConfigurationService
             null,
             true,
             10,
-            ['ssr_deploy', 'backup_dns']
+            ['backup_dns']
         );
 
         $this->remoteCommandService->executeCommand($backupDnsCommand);
@@ -239,7 +239,7 @@ class DnsConfigurationService
             null,
             false,
             5,
-            ['ssr_deploy', 'check_systemd_resolved']
+            ['check_systemd_resolved']
         );
 
         $this->remoteCommandService->executeCommand($checkSystemdCommand);
@@ -289,7 +289,7 @@ class DnsConfigurationService
             null,
             false,
             10,
-            ['ssr_deploy', 'check_dns_status']
+            ['check_dns_status']
         );
 
         $this->remoteCommandService->executeCommand($statusCommand);
@@ -312,7 +312,7 @@ class DnsConfigurationService
             null,
             false,
             5,
-            ['ssr_deploy', 'get_interface']
+            ['get_interface']
         );
 
         $this->remoteCommandService->executeCommand($interfaceCommand);
@@ -333,7 +333,7 @@ class DnsConfigurationService
             null,
             true,
             10,
-            ['ssr_deploy', 'config_interface_dns']
+            ['config_interface_dns']
         );
 
         $this->remoteCommandService->executeCommand($dnsConfigCommand);
@@ -349,7 +349,7 @@ class DnsConfigurationService
                 null,
                 true,
                 10,
-                ['ssr_deploy', 'config_dns_domain']
+                ['config_dns_domain']
             );
 
             $this->remoteCommandService->executeCommand($domainCommand);
@@ -362,7 +362,7 @@ class DnsConfigurationService
                 null,
                 true,
                 10,
-                ['ssr_deploy', 'flush_dns_cache']
+                ['flush_dns_cache']
             );
 
             $this->remoteCommandService->executeCommand($flushCommand);
@@ -398,7 +398,7 @@ class DnsConfigurationService
             null,
             true,
             5,
-            ['ssr_deploy', 'create_resolved_dir']
+            ['create_resolved_dir']
         );
 
         $this->remoteCommandService->executeCommand($createDirCommand);
@@ -411,7 +411,7 @@ class DnsConfigurationService
             null,
             false,
             5,
-            ['ssr_deploy', 'check_resolved_dir']
+            ['check_resolved_dir']
         );
 
         $this->remoteCommandService->executeCommand($checkDirCommand);
@@ -444,7 +444,7 @@ EOF',
             null,
             true,
             10,
-            ['ssr_deploy', 'config_systemd_resolved']
+            ['config_systemd_resolved']
         );
 
         $this->remoteCommandService->executeCommand($configResolvedCommand);
@@ -470,7 +470,7 @@ EOF',
             null,
             true,
             15,
-            ['ssr_deploy', 'restart_systemd_resolved']
+            ['restart_systemd_resolved']
         );
 
         $this->remoteCommandService->executeCommand($restartResolvedCommand);
@@ -493,7 +493,7 @@ EOF',
             null,
             true,
             10,
-            ['ssr_deploy', 'flush_resolved_cache']
+            ['flush_resolved_cache']
         );
 
         $this->remoteCommandService->executeCommand($flushCommand);
@@ -510,7 +510,7 @@ EOF',
             null,
             false,
             10,
-            ['ssr_deploy', 'test_new_dns']
+            ['test_new_dns']
         );
 
         $this->remoteCommandService->executeCommand($testDnsCommand);
@@ -554,7 +554,7 @@ EOF',
             null,
             true,
             5,
-            ['ssr_deploy', 'remove_immutable']
+            ['remove_immutable']
         );
 
         $this->remoteCommandService->executeCommand($removeImmutableCommand);
@@ -568,7 +568,7 @@ EOF',
             null,
             true,
             5,
-            ['ssr_deploy', 'remove_symlink']
+            ['remove_symlink']
         );
 
         $this->remoteCommandService->executeCommand($removeSymlinkCommand);
@@ -594,7 +594,7 @@ EOF',
             null,
             true,
             10,
-            ['ssr_deploy', 'create_resolv_conf']
+            ['create_resolv_conf']
         );
 
         $this->remoteCommandService->executeCommand($newDnsCommand);
@@ -624,7 +624,7 @@ EOF',
             null,
             true,
             5,
-            ['ssr_deploy', 'set_immutable']
+            ['set_immutable']
         );
 
         $this->remoteCommandService->executeCommand($setImmutableCommand);
@@ -651,7 +651,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             true,
             10,
-            ['ssr_deploy', 'create_resolv_conf_temp']
+            ['create_resolv_conf_temp']
         );
 
         $this->remoteCommandService->executeCommand($tempDnsCommand);
@@ -701,7 +701,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             true,
             5,
-            ['ssr_deploy', 'create_docker_dir']
+            ['create_docker_dir']
         );
 
         $this->remoteCommandService->executeCommand($createDirCommand);
@@ -720,7 +720,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             false,
             5,
-            ['ssr_deploy', 'check_docker_config']
+            ['check_docker_config']
         );
 
         $this->remoteCommandService->executeCommand($checkDockerConfigCommand);
@@ -739,7 +739,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             true,
             10,
-            ['ssr_deploy', 'update_docker_dns_config']
+            ['update_docker_dns_config']
         );
 
         $this->remoteCommandService->executeCommand($updateDockerConfigCommand);
@@ -763,7 +763,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             true,
             30,
-            ['ssr_deploy', 'restart_docker_dns']
+            ['restart_docker_dns']
         );
 
         $this->remoteCommandService->executeCommand($restartDockerCommand);
@@ -782,7 +782,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             true,
             10,
-            ['ssr_deploy', 'flush_dns_cache']
+            ['flush_dns_cache']
         );
 
         $this->remoteCommandService->executeCommand($flushDnsCommand);
@@ -801,7 +801,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             null,
             false,
             10,
-            ['ssr_deploy', 'verify_dns']
+            ['verify_dns']
         );
 
         $this->remoteCommandService->executeCommand($verifyDnsCommand);

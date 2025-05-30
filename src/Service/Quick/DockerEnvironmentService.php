@@ -34,7 +34,7 @@ class DockerEnvironmentService
             null,
             false, // 不使用sudo
             30,
-            ['ssr_deploy', 'docker_check']
+            ['docker_check']
         );
 
         $this->remoteCommandService->executeCommand($dockerCheckCommand);
@@ -58,7 +58,7 @@ class DockerEnvironmentService
                 null,
                 false,
                 30,
-                ['ssr_deploy', 'docker_info_check']
+                ['docker_info_check']
             );
 
             $this->remoteCommandService->executeCommand($dockerInfoCommand);
@@ -93,7 +93,7 @@ class DockerEnvironmentService
             null,
             false,
             30,
-            ['ssr_deploy', 'check_os']
+            ['check_os']
         );
         
         $this->remoteCommandService->executeCommand($systemCheckCommand);
@@ -109,7 +109,7 @@ class DockerEnvironmentService
             null,
             true,
             120,
-            ['ssr_deploy', 'install_curl']
+            ['install_curl']
         );
 
         $this->remoteCommandService->executeCommand($installCurlCommand);
@@ -125,7 +125,7 @@ class DockerEnvironmentService
             null,
             true,
             120,
-            ['ssr_deploy', 'download_docker_script']
+            ['download_docker_script']
         );
 
         $this->remoteCommandService->executeCommand($downloadDockerScript);
@@ -145,7 +145,7 @@ class DockerEnvironmentService
             null,
             true,
             600,
-            ['ssr_deploy', 'install_docker']
+            ['install_docker']
         );
 
         $this->remoteCommandService->executeCommand($installDockerCommand);
@@ -165,7 +165,7 @@ class DockerEnvironmentService
             null,
             true,
             30,
-            ['ssr_deploy', 'add_user_docker']
+            ['add_user_docker']
         );
 
         $this->remoteCommandService->executeCommand($addUserCommand);
@@ -187,7 +187,7 @@ class DockerEnvironmentService
             null,
             true, // 使用sudo验证
             60,
-            ['ssr_deploy', 'verify_docker']
+            ['verify_docker']
         );
 
         $this->remoteCommandService->executeCommand($verifyDockerCommand);
@@ -216,7 +216,7 @@ class DockerEnvironmentService
             null,
             true,
             60,
-            ['ssr_deploy', 'systemctl_docker']
+            ['systemctl_docker']
         );
 
         $this->remoteCommandService->executeCommand($systemctlCommand);
@@ -236,7 +236,7 @@ class DockerEnvironmentService
             null,
             true,
             60,
-            ['ssr_deploy', 'service_docker']
+            ['service_docker']
         );
 
         $this->remoteCommandService->executeCommand($serviceCommand);
@@ -255,7 +255,7 @@ class DockerEnvironmentService
             null,
             true,
             30,
-            ['ssr_deploy', 'dockerd_direct']
+            ['dockerd_direct']
         );
 
         $this->remoteCommandService->executeCommand($dockerdCommand);
@@ -269,7 +269,7 @@ class DockerEnvironmentService
             null,
             true,
             30,
-            ['ssr_deploy', 'test_docker']
+            ['test_docker']
         );
 
         $this->remoteCommandService->executeCommand($testDockerCommand);
@@ -290,7 +290,7 @@ class DockerEnvironmentService
             null,
             false,
             30,
-            ['ssr_deploy', 'verify_after_start']
+            ['verify_after_start']
         );
 
         $this->remoteCommandService->executeCommand($verifyCommand);
