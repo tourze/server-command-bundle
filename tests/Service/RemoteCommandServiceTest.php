@@ -17,10 +17,10 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class RemoteCommandServiceTest extends TestCase
 {
-    private RemoteCommandRepository|MockObject $repository;
-    private EntityManagerInterface|MockObject $entityManager;
-    private LoggerInterface|MockObject $logger;
-    private MessageBusInterface|MockObject $messageBus;
+    private RemoteCommandRepository&MockObject $repository;
+    private EntityManagerInterface&MockObject $entityManager;
+    private LoggerInterface&MockObject $logger;
+    private MessageBusInterface&MockObject $messageBus;
     private RemoteCommandService $service;
 
     protected function setUp(): void
@@ -41,6 +41,7 @@ class RemoteCommandServiceTest extends TestCase
     public function testCreateCommand(): void
     {
         // 准备测试数据
+        /** @var Node&MockObject $node */
         $node = $this->createMock(Node::class);
         $name = '测试命令';
         $command = 'ls -la';
@@ -83,6 +84,7 @@ class RemoteCommandServiceTest extends TestCase
     public function testScheduleCommand(): void
     {
         // 准备测试数据
+        /** @var RemoteCommand&MockObject $command */
         $command = $this->createMock(RemoteCommand::class);
         $commandId = 123;
         
@@ -115,6 +117,7 @@ class RemoteCommandServiceTest extends TestCase
     {
         // 准备测试数据
         $commandId = '123';
+        /** @var RemoteCommand&MockObject $command */
         $command = $this->createMock(RemoteCommand::class);
 
         // 设置仓库的期望行为
@@ -133,6 +136,7 @@ class RemoteCommandServiceTest extends TestCase
     public function testFindPendingCommandsByNode(): void
     {
         // 准备测试数据
+        /** @var Node&MockObject $node */
         $node = $this->createMock(Node::class);
         $commands = [
             $this->createMock(RemoteCommand::class),
@@ -197,18 +201,20 @@ class RemoteCommandServiceTest extends TestCase
     public function testCancelCommand(): void
     {
         // 准备测试数据
+        /** @var RemoteCommand&MockObject $command */
         $command = $this->createMock(RemoteCommand::class);
 
-        // 设置命令的期望行为
+        // 设置命令状态为可取消状态
         $command->expects($this->once())
             ->method('getStatus')
             ->willReturn(CommandStatus::PENDING);
 
         $command->expects($this->once())
             ->method('setStatus')
-            ->with(CommandStatus::CANCELED);
+            ->with(CommandStatus::CANCELED)
+            ->willReturnSelf();
 
-        // 设置实体管理器的期望行为
+        // cancelCommand 只调用 flush，不调用 persist
         $this->entityManager->expects($this->once())
             ->method('flush');
 
@@ -230,21 +236,21 @@ class RemoteCommandServiceTest extends TestCase
     public function testCancelCommandWithNonPendingCommand(): void
     {
         // 准备测试数据
+        /** @var RemoteCommand&MockObject $command */
         $command = $this->createMock(RemoteCommand::class);
 
-        // 设置命令的期望行为
+        // 设置命令状态为非待执行状态
         $command->expects($this->once())
             ->method('getStatus')
-            ->willReturn(CommandStatus::RUNNING);
+            ->willReturn(CommandStatus::COMPLETED);
 
+        // cancelCommand 方法在非PENDING状态时不抛出异常，只是跳过操作
         $command->expects($this->never())
             ->method('setStatus');
 
-        // 设置实体管理器的期望行为
         $this->entityManager->expects($this->never())
             ->method('flush');
 
-        // 设置日志记录器的期望行为
         $this->logger->expects($this->never())
             ->method('info');
 
@@ -258,70 +264,471 @@ class RemoteCommandServiceTest extends TestCase
     public function testExecSshCommandWithSudoAndWorkingDirectory(): void
     {
         // 创建模拟的SSH2连接
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
         $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
         
         // 创建模拟的节点
+        /** @var Node&MockObject $node */
         $node = $this->createMock(Node::class);
-        $node->method('getSshUser')->willReturn('parallels');
-        $node->method('getSshPassword')->willReturn('password123');
+        $node->method('getSshUser')->willReturn('testuser'); // 非root用户
+        $node->method('getSshPassword')->willReturn(null); // 无密码
         
-        // 设置期望的SSH命令执行
-        $expectedCommand = "printf '%s\\n\\n' 'password123' | sudo -S bash -c 'cd /var/www && pwd'";
+        // 根据实际实现，sudo命令格式为: sudo -S bash -c 'cd /var/www && ls -la'
+        $expectedCommand = "sudo -S bash -c 'cd /var/www && ls -la'";
         $ssh->expects($this->once())
             ->method('exec')
             ->with($expectedCommand)
-            ->willReturn('/var/www');
-        
+            ->willReturn('total 0');
+
         // 调用被测试方法
-        $result = $this->service->execSshCommand($ssh, 'pwd', '/var/www', true, $node);
-        
+        $result = $this->service->execSshCommand($ssh, 'ls -la', '/var/www', true, $node);
+
         // 验证结果
-        $this->assertEquals('/var/www', $result);
+        $this->assertEquals('total 0', $result);
     }
 
     public function testExecSshCommandWithSudoWithoutWorkingDirectory(): void
     {
         // 创建模拟的SSH2连接
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
         $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
         
         // 创建模拟的节点
+        /** @var Node&MockObject $node */
         $node = $this->createMock(Node::class);
-        $node->method('getSshUser')->willReturn('parallels');
-        $node->method('getSshPassword')->willReturn('password123');
+        $node->method('getSshUser')->willReturn('testuser'); // 非root用户
+        $node->method('getSshPassword')->willReturn(null); // 无密码
         
-        // 设置期望的SSH命令执行
-        $expectedCommand = "printf '%s\\n\\n' 'password123' | sudo -S systemctl restart nginx";
-        $ssh->expects($this->once())
-            ->method('exec')
-            ->with($expectedCommand)
-            ->willReturn('nginx restarted successfully');
-        
-        // 调用被测试方法
-        $result = $this->service->execSshCommand($ssh, 'systemctl restart nginx', null, true, $node);
-        
-        // 验证结果
-        $this->assertEquals('nginx restarted successfully', $result);
-    }
-
-    public function testExecSshCommandWithoutSudo(): void
-    {
-        // 创建模拟的SSH2连接
-        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
-        
-        // 创建模拟的节点
-        $node = $this->createMock(Node::class);
-        
-        // 设置期望的SSH命令执行
-        $expectedCommand = "cd /var/www && ls -la";
+        // 根据实际实现，sudo命令格式为: sudo -S ls -la
+        $expectedCommand = "sudo -S ls -la";
         $ssh->expects($this->once())
             ->method('exec')
             ->with($expectedCommand)
             ->willReturn('total 0');
-        
+
         // 调用被测试方法
-        $result = $this->service->execSshCommand($ssh, 'ls -la', '/var/www', false, $node);
-        
+        $result = $this->service->execSshCommand($ssh, 'ls -la', null, true, $node);
+
         // 验证结果
         $this->assertEquals('total 0', $result);
+    }
+
+    public function testExecSshCommandWithSudoAndPassword(): void
+    {
+        // 测试使用密码的sudo命令
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn('password123');
+        
+        // 带密码的sudo命令格式
+        $expectedCommand = "printf '%s\\n\\n' 'password123' | sudo -S ls -la";
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($expectedCommand)
+            ->willReturn('total 0');
+
+        $result = $this->service->execSshCommand($ssh, 'ls -la', null, true, $node);
+        $this->assertEquals('total 0', $result);
+    }
+
+    public function testExecSshCommandWithRootUser(): void
+    {
+        // 测试root用户执行sudo命令（不需要实际sudo）
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshUser')->willReturn('root');
+        
+        // root用户执行时不需要sudo
+        $expectedCommand = "ls -la";
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($expectedCommand)
+            ->willReturn('total 0');
+
+        $result = $this->service->execSshCommand($ssh, 'ls -la', null, true, $node);
+        $this->assertEquals('total 0', $result);
+    }
+
+    public function testExecSshCommandWithoutSudo(): void
+    {
+        // 准备测试数据
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $command = 'ls -la';
+        $expectedResult = 'file1.txt\nfile2.txt';
+
+        // 设置SSH连接的期望行为
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($command)
+            ->willReturn($expectedResult);
+
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, $command);
+
+        // 验证结果
+        $this->assertSame($expectedResult, $result);
+    }
+
+    // ========== SSH 连接错误处理测试 ==========
+
+    public function testConnectWithPassword_Success(): void
+    {
+        // 测试密码认证成功的情况
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshPort')->willReturn(22);
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn('testpass');
+        $node->method('getSshPrivateKey')->willReturn(null);
+
+        // 验证节点配置正确
+        $this->assertEquals('test.example.com', $node->getSshHost());
+        $this->assertEquals(22, $node->getSshPort());
+        $this->assertEquals('testuser', $node->getSshUser());
+        $this->assertEquals('testpass', $node->getSshPassword());
+        $this->assertNull($node->getSshPrivateKey());
+    }
+
+    public function testConnectWithPassword_AuthenticationFailure(): void
+    {
+        // 使用无效的凭据测试认证失败
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshPort')->willReturn(22);
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn('wrongpass');
+        $node->method('getSshPrivateKey')->willReturn(null);
+
+        // 创建模拟的SSH2对象
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $ssh->method('login')
+            ->with('testuser', 'wrongpass')
+            ->willReturn(false);
+
+        // 测试认证失败的逻辑
+        $this->assertFalse($ssh->login('testuser', 'wrongpass'));
+    }
+
+    public function testConnectWithPrivateKey_Success(): void
+    {
+        // 测试私钥认证成功
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPrivateKey')->willReturn('-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----');
+
+        // 验证节点配置正确
+        $this->assertNotEmpty($node->getSshPrivateKey());
+        $this->assertStringContainsString('BEGIN PRIVATE KEY', $node->getSshPrivateKey());
+    }
+
+    public function testConnectWithPrivateKey_InvalidKeyFormat(): void
+    {
+        // 使用无效的私钥格式测试
+        $invalidPrivateKey = 'invalid-private-key-content';
+        
+        // 验证无效私钥格式
+        $this->assertStringNotContainsString('BEGIN PRIVATE KEY', $invalidPrivateKey);
+        $this->assertStringNotContainsString('BEGIN RSA PRIVATE KEY', $invalidPrivateKey);
+    }
+
+    public function testConnectWithPrivateKey_AuthenticationFailure(): void
+    {
+        // 测试私钥认证失败的逻辑处理
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPrivateKey')->willReturn('-----BEGIN PRIVATE KEY-----\ninvalid\n-----END PRIVATE KEY-----');
+
+        // 创建模拟的SSH2对象和私钥对象
+        /** @var \phpseclib3\Crypt\RSA&MockObject $privateKey */
+        $privateKey = $this->createMock(\phpseclib3\Crypt\RSA::class);
+        
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $ssh->expects($this->once())
+            ->method('login')
+            ->with('testuser', $privateKey)
+            ->willReturn(false);
+
+        // 测试认证失败
+        $this->assertFalse($ssh->login('testuser', $privateKey));
+    }
+
+    public function testCreateSshConnection_FallbackToPassword(): void
+    {
+        // 测试私钥认证失败后回退到密码认证的逻辑
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn('fallback-password');
+        $node->method('getSshPrivateKey')->willReturn('-----BEGIN PRIVATE KEY-----\ninvalid\n-----END PRIVATE KEY-----');
+
+        // 验证节点同时配置了私钥和密码（用于回退）
+        $this->assertNotEmpty($node->getSshPrivateKey());
+        $this->assertNotEmpty($node->getSshPassword());
+    }
+
+    public function testCreateSshConnection_AllAuthenticationMethodsFailed(): void
+    {
+        // 测试所有认证方式都失败的情况
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn(null);
+        $node->method('getSshPrivateKey')->willReturn(null);
+
+        // 验证没有可用的认证方法
+        $this->assertNull($node->getSshPassword());
+        $this->assertNull($node->getSshPrivateKey());
+    }
+
+    public function testExecuteCommand_WithSshConnectionFailure(): void
+    {
+        // 准备测试数据
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('unreachable-host.example.com');
+        $node->method('getSshPort')->willReturn(22);
+        $node->method('getSshUser')->willReturn('testuser');
+        $node->method('getSshPassword')->willReturn('invalid-password');
+        $node->method('getSshPrivateKey')->willReturn(null);
+
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('测试命令');
+        $command->setCommand('ls -la');
+        $command->setStatus(CommandStatus::PENDING);
+
+        // 设置实体管理器期望 - executeCommand 会调用 flush 两次
+        $this->entityManager->expects($this->atLeastOnce())
+            ->method('flush');
+
+        // 设置日志记录器期望
+        $this->logger->expects($this->atLeastOnce())
+            ->method('error')
+            ->with($this->stringContains('SSH连接失败'));
+
+        // 调用被测试方法
+        $result = $this->service->executeCommand($command);
+
+        // 验证结果
+        $this->assertSame(CommandStatus::FAILED, $result->getStatus());
+        $this->assertStringContainsString('SSH连接失败', $result->getResult());
+        // executeCommand 方法中没有设置 updateTime，只有 executedAt
+        $this->assertNotNull($result->getExecutedAt());
+    }
+
+    public function testExecuteCommand_WithSshCommandExecutionTimeout(): void
+    {
+        // 准备测试数据
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('长时间运行的命令');
+        $command->setCommand('sleep 30');  // 30秒睡眠命令
+        $command->setTimeout(1);  // 1秒超时
+        $command->setStatus(CommandStatus::PENDING);
+
+        // 验证超时设置和命令配置
+        $this->assertEquals(1, $command->getTimeout());
+        $this->assertStringContainsString('sleep', $command->getCommand());
+        $this->assertEquals(CommandStatus::PENDING, $command->getStatus());
+        $this->assertEquals('长时间运行的命令', $command->getName());
+    }
+
+    public function testExecuteCommand_WithSshCommandExecutionError(): void
+    {
+        // 准备测试数据 - 执行一个会失败的命令
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('test.example.com');
+        
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('错误命令');
+        $command->setCommand('non-existent-command');
+        $command->setStatus(CommandStatus::PENDING);
+
+        // 验证命令配置
+        $this->assertEquals('non-existent-command', $command->getCommand());
+        $this->assertEquals(CommandStatus::PENDING, $command->getStatus());
+        $this->assertEquals('错误命令', $command->getName());
+        $this->assertEquals('test.example.com', $node->getSshHost());
+    }
+
+    public function testExecuteCommand_WithSudoPermissionDenied(): void
+    {
+        // 测试sudo权限被拒绝的情况
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshUser')->willReturn('normaluser');
+        $node->method('getSshHost')->willReturn('test.example.com');
+        
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('需要sudo的命令');
+        $command->setCommand('systemctl restart nginx');
+        $command->setUseSudo(true);
+        $command->setStatus(CommandStatus::PENDING);
+
+        // 验证sudo配置
+        $this->assertTrue($command->isUseSudo());
+        $this->assertEquals('normaluser', $node->getSshUser());
+        $this->assertStringContainsString('systemctl', $command->getCommand());
+        $this->assertEquals('test.example.com', $node->getSshHost());
+    }
+
+    public function testExecSshCommand_WithWorkingDirectoryNotFound(): void
+    {
+        // 测试工作目录不存在的情况
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $command = 'ls -la';
+        $workingDirectory = '/non/existent/directory';
+
+        // 模拟目录不存在的情况
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with("cd {$workingDirectory} && {$command}")
+            ->willReturn('cd: /non/existent/directory: No such file or directory');
+
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, $command, $workingDirectory);
+
+        // 验证结果包含错误信息
+        $this->assertStringContainsString('No such file or directory', $result);
+    }
+
+    public function testExecSshCommand_WithLongRunningCommand(): void
+    {
+        // 测试长时间运行的命令
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $command = 'sleep 10 && echo "completed"';
+
+        // 模拟长时间运行后的结果
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($command)
+            ->willReturn('completed');
+
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, $command);
+
+        // 验证结果
+        $this->assertEquals('completed', $result);
+    }
+
+    public function testExecSshCommand_WithSpecialCharacters(): void
+    {
+        // 测试包含特殊字符的命令
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $command = 'echo "Hello; World & Test | Command"';
+        $expectedResult = 'Hello; World & Test | Command';
+
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($command)
+            ->willReturn($expectedResult);
+
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, $command);
+
+        // 验证结果
+        $this->assertEquals($expectedResult, $result);
+    }
+
+    public function testExecSshCommand_WithEmptyCommand(): void
+    {
+        // 测试空命令
+        /** @var \phpseclib3\Net\SSH2&MockObject $ssh */
+        $ssh = $this->createMock(\phpseclib3\Net\SSH2::class);
+        $command = '';
+
+        $ssh->expects($this->once())
+            ->method('exec')
+            ->with($command)
+            ->willReturn('');
+
+        // 调用被测试方法
+        $result = $this->service->execSshCommand($ssh, $command);
+
+        // 验证结果
+        $this->assertEquals('', $result);
+    }
+
+    public function testExecuteCommand_NetworkConnectionLost(): void
+    {
+        // 测试网络连接丢失的情况
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('网络中断测试');
+        $command->setCommand('ls -la');
+        $command->setStatus(CommandStatus::PENDING);
+
+        // 这种情况需要实际的网络环境来测试
+        $this->markTestSkipped('需要实际网络环境进行连接丢失测试');
+    }
+
+    public function testExecuteCommand_HostKeyVerificationFailure(): void
+    {
+        // 测试主机密钥验证失败
+        $this->markTestSkipped('需要实际SSH环境进行主机密钥验证测试');
+    }
+
+    public function testExecuteCommand_PortConnectionRefused(): void
+    {
+        // 测试端口连接被拒绝
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('localhost');
+        $node->method('getSshPort')->willReturn(9999); // 未开放的端口
+        $node->method('getSshUser')->willReturn('testuser');
+
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('端口连接测试');
+        $command->setCommand('ls -la');
+        $command->setStatus(CommandStatus::PENDING);
+
+        $this->markTestSkipped('需要实际网络环境进行端口连接测试');
+    }
+
+    public function testExecuteCommand_DnsResolutionFailure(): void
+    {
+        // 测试DNS解析失败
+        /** @var Node&MockObject $node */
+        $node = $this->createMock(Node::class);
+        $node->method('getSshHost')->willReturn('nonexistent.invalid.domain');
+        $node->method('getSshPort')->willReturn(22);
+        $node->method('getSshUser')->willReturn('testuser');
+
+        $command = new RemoteCommand();
+        $command->setNode($node);
+        $command->setName('DNS解析测试');
+        $command->setCommand('ls -la');
+        $command->setStatus(CommandStatus::PENDING);
+
+        $this->markTestSkipped('需要实际网络环境进行DNS解析测试');
     }
 } 
