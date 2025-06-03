@@ -30,6 +30,7 @@
     "symfony/security-bundle": "^6.4",
     "symfony/serializer": "^6.4",
     "symfony/yaml": "^6.4 || ^7.1",
+    "tourze/async-contracts": "0.0.*",
     "tourze/bundle-dependency": "0.0.*",
     "tourze/doctrine-indexed-bundle": "0.0.*",
     "tourze/doctrine-timestamp-bundle": "0.0.*",
@@ -39,7 +40,6 @@
     "tourze/easy-admin-menu-bundle": "0.1.*",
     "tourze/enum-extra": "0.1.*",
     "tourze/server-node-bundle": "0.0.*",
-    "tourze/symfony-async-bundle": "0.0.*",
     "tourze/symfony-routing-auto-loader-bundle": "0.0.*",
     "tourze/symfony-schedule-entity-clean-bundle": "0.1.*"
   },

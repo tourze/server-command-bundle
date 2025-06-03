@@ -4,7 +4,7 @@ namespace ServerCommandBundle\Tests\Message;
 
 use PHPUnit\Framework\TestCase;
 use ServerCommandBundle\Message\RemoteCommandExecuteMessage;
-use Tourze\Symfony\Async\Message\AsyncMessageInterface;
+use Tourze\AsyncContracts\AsyncMessageInterface;
 
 class RemoteCommandExecuteMessageTest extends TestCase
 {

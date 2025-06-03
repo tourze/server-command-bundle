@@ -2,7 +2,7 @@
 
 namespace ServerCommandBundle\Message;
 
-use Tourze\Symfony\Async\Message\AsyncMessageInterface;
+use Tourze\AsyncContracts\AsyncMessageInterface;
 
 class RemoteCommandExecuteMessage implements AsyncMessageInterface
 {
