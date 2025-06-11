@@ -250,7 +250,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             } else {
                 $this->addFlash('warning', sprintf('文件传输 "%s" 重新执行失败: %s', $transfer->getName(), $result->getResult()));
             }
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $this->addFlash('danger', sprintf('重新执行传输时出错: %s', $e->getMessage()));
         }
 
@@ -269,7 +269,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
         try {
             $this->remoteFileService->cancelTransfer($transfer);
             $this->addFlash('success', sprintf('文件传输 "%s" 已取消', $transfer->getName()));
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $this->addFlash('danger', sprintf('取消传输时出错: %s', $e->getMessage()));
         }
 

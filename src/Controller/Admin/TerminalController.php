@@ -62,7 +62,7 @@ class TerminalController extends AbstractController
                 'executionTime' => $remoteCommand->getExecutionTime(),
                 'commandId' => $remoteCommand->getId(),
             ]);
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             return new JsonResponse([
                 'success' => false,
                 'error' => $e->getMessage(),

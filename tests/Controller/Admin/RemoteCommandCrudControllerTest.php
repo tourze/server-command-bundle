@@ -128,7 +128,7 @@ class RemoteCommandCrudControllerTest extends TestCase
             $controller->configureFilters(Filters::new());
             
             self::assertTrue(true, '基本配置方法都应该正常执行');
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             self::fail('基本配置方法不应该抛出异常: ' . $e->getMessage());
         }
     }

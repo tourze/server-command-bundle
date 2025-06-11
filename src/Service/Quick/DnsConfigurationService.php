@@ -191,7 +191,7 @@ class DnsConfigurationService
             try {
                 $this->configureSystemdResolvedDns($deployTask, $node);
                 $dnsConfigured = true;
-            } catch  (\Throwable $e) {
+            } catch (\Throwable $e) {
                 $deployTask->appendLog('systemd-resolved配置失败: ' . $e->getMessage());
                 $deployTask->appendLog('切换到传统DNS配置方式...');
             }
@@ -683,7 +683,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
             $this->restartDockerForDns($deployTask, $node);
             
             return true;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $deployTask->appendLog('Docker DNS配置失败: ' . $e->getMessage());
             return false;
         }
