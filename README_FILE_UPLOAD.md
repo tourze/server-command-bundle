@@ -187,7 +187,7 @@ public function deployConfig(Node $node, string $configPath): bool
         ]);
         return false;
         
-    } catch (\Throwable $e) {
+    } catch  (\Throwable $e) {
         $this->logger->error('部署过程中出现异常', [
             'error' => $e->getMessage()
         ]);

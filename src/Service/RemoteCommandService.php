@@ -139,7 +139,7 @@ class RemoteCommandService
             $this->configureSshConnection($ssh, $host, $port, $user, '私钥认证');
 
             return $ssh;
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $error = 'SSH连接失败: 私钥加载或认证失败';
             $this->logger->error($error, [
                 'host' => $host,
@@ -166,7 +166,7 @@ class RemoteCommandService
         if ($privateKey) {
             try {
                 return $this->connectWithPrivateKey($host, $port, $user, $privateKey);
-            } catch (\Throwable $e) {
+            } catch  (\Throwable $e) {
                 $this->logger->warning('SSH私钥认证失败，尝试密码认证', [
                     'host' => $host,
                     'port' => $port,
@@ -180,7 +180,7 @@ class RemoteCommandService
         if ($password) {
             try {
                 return $this->connectWithPassword($host, $port, $user, $password);
-            } catch (\Throwable $e) {
+            } catch  (\Throwable $e) {
                 // 密码认证也失败了，记录错误并抛出异常
                 $this->logger->error('SSH密码认证也失败', [
                     'host' => $host,
@@ -267,7 +267,7 @@ class RemoteCommandService
 
             // 恢复无超时设置
             $ssh->setTimeout(0);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->warning('切换到root用户时出错: ' . $e->getMessage(), ['node' => $node->getId()]);
             // 失败后尝试继续，使用当前用户执行命令
         }
@@ -353,7 +353,7 @@ class RemoteCommandService
         if (null === $ssh) {
             try {
                 $ssh = $this->createSshConnection($node, $command->isUseSudo());
-            } catch (\Throwable $e) {
+            } catch  (\Throwable $e) {
                 $command->setStatus(CommandStatus::FAILED);
                 $command->setResult('SSH连接失败: ' . $e->getMessage());
                 $this->entityManager->flush();
@@ -388,7 +388,7 @@ class RemoteCommandService
                 'command' => $command,
                 'duration' => $duration->asString(),
             ]);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $duration = $timer->stop();
             $command->setExecutionTime($duration->asSeconds());
             $command->setResult('执行失败: ' . $e->getMessage());

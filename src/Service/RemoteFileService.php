@@ -192,7 +192,7 @@ class RemoteFileService
                 'duration' => $duration->asString(),
             ]);
 
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $duration = $timer->stop();
             $transfer->setTransferTime($duration->asSeconds());
             $transfer->setStatus(FileTransferStatus::FAILED);
