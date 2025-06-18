@@ -47,7 +47,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findPendingCommandsByNode($node);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -85,7 +84,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findAllPendingCommands();
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -130,7 +128,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findByTags($tags);
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 
@@ -151,7 +148,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findByTags($tags);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -172,7 +168,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findByTags($tags);
-        $this->assertIsArray($result);
         $this->assertCount(1, $result);
     }
 
@@ -196,7 +191,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findTerminalCommandsByNode($node);
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 
@@ -218,7 +212,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findTerminalCommandsByNode($node, $limit);
-        $this->assertIsArray($result);
         $this->assertCount(5, $result);
     }
 
@@ -240,7 +233,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findTerminalCommandsByNode($node, $limit);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -261,7 +253,6 @@ class RemoteCommandRepositoryTest extends TestCase
             ->willReturn($expectedCommands);
             
         $result = $repository->findTerminalCommandsByNode($node);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 

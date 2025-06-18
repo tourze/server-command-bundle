@@ -27,7 +27,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findPendingTransfersByNode($node);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
     }
 
     public function test_find_pending_transfers_by_node_empty_result(): void
@@ -47,7 +46,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findPendingTransfersByNode($node);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -69,7 +67,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findAllPendingTransfers();
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 
@@ -88,7 +85,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findAllPendingTransfers();
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -109,7 +105,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findByTags($tags);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertCount(1, $result);
     }
 
@@ -130,7 +125,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findByTags($tags);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -174,7 +168,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findByStatus($status);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
     }
 
     public function test_find_by_status_all_statuses(): void
@@ -204,7 +197,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
                 ->willReturn($expectedTransfers);
                 
             $result = $repository->findByStatus($status);
-            $this->assertIsArray($result);
             $this->assertCount(1, $result);
         }
     }
@@ -230,7 +222,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findByDateRange($startDate, $endDate);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 
@@ -251,7 +242,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             ->willReturn($expectedTransfers);
             
         $result = $repository->findByDateRange($startDate, $endDate);
-        $this->assertIsArray($result);
         $this->assertCount(1, $result);
     }
 
@@ -272,7 +262,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             ->willReturn($expectedTransfers);
             
         $result = $repository->findByDateRange($startDate, $endDate);
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -294,7 +283,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findFailedTransfers();
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 
@@ -312,7 +300,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             ->willReturn($expectedTransfers);
             
         $result = $repository->findFailedTransfers();
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -335,7 +322,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findCompletedTransfers();
         $this->assertSame($expectedTransfers, $result);
-        $this->assertIsArray($result);
         $this->assertCount(3, $result);
     }
 
@@ -353,7 +339,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             ->willReturn($expectedTransfers);
             
         $result = $repository->findCompletedTransfers();
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 

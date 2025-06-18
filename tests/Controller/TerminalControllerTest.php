@@ -470,7 +470,6 @@ class TerminalControllerTest extends TestCase
         $data = json_decode($response->getContent(), true);
         $this->assertTrue($data['success']);
         $this->assertCount(0, $data['history']);
-        $this->assertIsArray($data['history']);
     }
 
     public function testHistoryWithRepositoryException(): void
