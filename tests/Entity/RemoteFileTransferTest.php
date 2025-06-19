@@ -11,7 +11,7 @@ use ServerNodeBundle\Entity\Node;
 class RemoteFileTransferTest extends TestCase
 {
     private RemoteFileTransfer $entity;
-    private MockObject $node;
+    private Node&MockObject $node;
 
     protected function setUp(): void
     {
@@ -28,7 +28,6 @@ class RemoteFileTransferTest extends TestCase
 
     public function test_getter_setter_for_node(): void
     {
-        /** @var Node $node */
         $node = $this->node;
         $result = $this->entity->setNode($node);
         
@@ -214,7 +213,7 @@ class RemoteFileTransferTest extends TestCase
     {
         $this->assertNull($this->entity->getCreateTime()); // 默认为空
         
-        $createTime = new \DateTime();
+        $createTime = new \DateTimeImmutable();
         $result = $this->entity->setCreateTime($createTime);
         
         $this->assertSame($this->entity, $result);
@@ -225,7 +224,7 @@ class RemoteFileTransferTest extends TestCase
     {
         $this->assertNull($this->entity->getUpdateTime()); // 默认为空
         
-        $updateTime = new \DateTime();
+        $updateTime = new \DateTimeImmutable();
         $result = $this->entity->setUpdateTime($updateTime);
         
         $this->assertSame($this->entity, $result);
@@ -235,7 +234,6 @@ class RemoteFileTransferTest extends TestCase
     public function test_to_string_returns_formatted_description(): void
     {
         $this->entity->setName('上传配置文件');
-        /** @var Node $node */
         $node = $this->node;
         $this->entity->setNode($node);
         $this->entity->setRemotePath('/etc/app/config.yml');
@@ -251,7 +249,6 @@ class RemoteFileTransferTest extends TestCase
         $differentNode->method('getName')->willReturn('production-server');
         
         $this->entity->setName('部署脚本');
-        /** @var Node $node */
         $node = $differentNode;
         $this->entity->setNode($node);
         $this->entity->setRemotePath('/opt/app/deploy.sh');

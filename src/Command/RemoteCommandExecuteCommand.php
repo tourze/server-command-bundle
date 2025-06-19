@@ -15,11 +15,12 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'server-node:remote-command:execute',
+    name: self::NAME,
     description: '执行远程命令',
 )]
 class RemoteCommandExecuteCommand extends Command
 {
+    public const NAME = 'server-node:remote-command:execute';
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
         private readonly NodeRepository $nodeRepository,
@@ -45,13 +46,13 @@ class RemoteCommandExecuteCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         // 执行所有待执行的命令
-        if ($input->getOption('execute-all-pending')) {
+        if (true === $input->getOption('execute-all-pending')) {
             return $this->executeAllPendingCommands($io);
         }
 
         // 执行指定ID的命令
         $commandId = $input->getArgument('command-id');
-        if ($commandId) {
+        if (null !== $commandId && '' !== $commandId) {
             return $this->executeCommandById($commandId, $io);
         }
 
@@ -60,7 +61,7 @@ class RemoteCommandExecuteCommand extends Command
         $name = $input->getOption('name');
         $command = $input->getOption('command');
 
-        if (!$nodeId || !$name || !$command) {
+        if (null === $nodeId || '' === $nodeId || null === $name || '' === $name || null === $command || '' === $command) {
             $io->error('必须指定节点ID、命令名称和命令内容，或者提供已存在的命令ID');
             return Command::INVALID;
         }
@@ -171,11 +172,11 @@ class RemoteCommandExecuteCommand extends Command
         $io->writeln(sprintf('状态: %s', $statusText));
         $io->writeln(sprintf('执行时间: %s', $command->getExecutedAt()?->format('Y-m-d H:i:s') ?? '未执行'));
 
-        if ($command->getExecutionTime()) {
+        if (null !== $command->getExecutionTime()) {
             $io->writeln(sprintf('执行耗时: %.2f 秒', $command->getExecutionTime()));
         }
 
-        if ($command->getResult()) {
+        if (null !== $command->getResult() && '' !== $command->getResult()) {
             $io->writeln('执行结果:');
             $io->writeln($command->getResult());
         }

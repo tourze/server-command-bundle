@@ -317,7 +317,7 @@ class DockerEnvironmentService
         
         if ($status === CommandStatus::COMPLETED && !$hasError) {
             $deployTask->appendLog("{$stepName}执行成功");
-            if ($result) {
+            if ('' !== $result) {
                 $deployTask->appendLog("执行结果: " . trim($result));
             }
         } else {

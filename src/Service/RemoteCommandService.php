@@ -163,7 +163,7 @@ class RemoteCommandService
         $password = $node->getSshPassword();
 
         // 优先尝试私钥认证
-        if ($privateKey) {
+        if (null !== $privateKey && '' !== $privateKey) {
             try {
                 return $this->connectWithPrivateKey($host, $port, $user, $privateKey);
             } catch (\Throwable $e) {
@@ -177,7 +177,7 @@ class RemoteCommandService
         }
 
         // 如果私钥认证失败或没有私钥，尝试密码认证
-        if ($password) {
+        if (null !== $password && '' !== $password) {
             try {
                 return $this->connectWithPassword($host, $port, $user, $password);
             } catch (\Throwable $e) {
@@ -302,19 +302,19 @@ class RemoteCommandService
     public function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
     {
         // 根据是否需要sudo执行不同的命令
-        if ($useSudo && $node && 'root' !== $node->getSshUser()) {
+        if ($useSudo && null !== $node && 'root' !== $node->getSshUser()) {
             // 使用sudo执行命令，通过shell -c来处理工作目录
-            if ($workingDirectory !== null) {
+            if (null !== $workingDirectory && '' !== $workingDirectory) {
                 // 使用bash -c来组合cd和命令，然后用sudo执行
                 $shellCommand = "cd {$workingDirectory} && {$command}";
-                if ($node->getSshPassword()) {
+                if (null !== $node->getSshPassword() && '' !== $node->getSshPassword()) {
                     return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S bash -c " . escapeshellarg($shellCommand));
                 } else {
                     return $ssh->exec("sudo -S bash -c " . escapeshellarg($shellCommand));
                 }
             } else {
                 // 没有工作目录时直接sudo执行命令
-                if ($node->getSshPassword()) {
+                if (null !== $node->getSshPassword() && '' !== $node->getSshPassword()) {
                     return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S {$command}");
                 } else {
                     return $ssh->exec("sudo -S {$command}");
@@ -411,7 +411,7 @@ class RemoteCommandService
      */
     public function scheduleCommand(RemoteCommand $command): void
     {
-        $message = new RemoteCommandExecuteMessage($command->getId());
+        $message = new RemoteCommandExecuteMessage((string) $command->getId());
         $this->messageBus->dispatch($message);
 
         $this->logger->info('命令已加入执行队列', ['command' => $command]);

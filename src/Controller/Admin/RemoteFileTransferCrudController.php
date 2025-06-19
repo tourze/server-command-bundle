@@ -299,7 +299,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             '超时时间' => $transfer->getTimeout() . '秒',
             '开始时间' => $transfer->getStartedAt()?->format('Y-m-d H:i:s'),
             '完成时间' => $transfer->getCompletedAt()?->format('Y-m-d H:i:s'),
-            '传输耗时' => $transfer->getTransferTime() ? round($transfer->getTransferTime(), 3) . '秒' : null,
+            '传输耗时' => null !== $transfer->getTransferTime() ? round($transfer->getTransferTime(), 3) . '秒' : null,
             '传输结果' => $transfer->getResult(),
             '标签' => is_array($transfer->getTags()) ? implode(', ', $transfer->getTags()) : null,
             '创建人' => $transfer->getCreatedBy(),
@@ -352,7 +352,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
 
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = floor(($bytes > 0 ? log($bytes) : 0) / log(1024));
         $pow = min($pow, count($units) - 1);
 
         $bytes /= (1 << (10 * $pow));

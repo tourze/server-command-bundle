@@ -115,7 +115,6 @@ class RemoteCommandCrudController extends AbstractCrudController
                     CommandStatus::FAILED => '失败',
                     CommandStatus::TIMEOUT => '超时',
                     CommandStatus::CANCELED => '已取消',
-                    default => '未知'
                 };
             });
 

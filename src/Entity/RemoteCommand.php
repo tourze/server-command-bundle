@@ -9,8 +9,7 @@ use ServerCommandBundle\Repository\RemoteCommandRepository;
 use ServerNodeBundle\Entity\Node;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 use Tourze\ScheduleEntityCleanBundle\Attribute\AsScheduleClean;
 
 #[AsScheduleClean(expression: '0 5 * * *', defaultKeepDay: 60, keepDayEnv: 'SERVER_COMMAND_LOG_PERSIST_DAY_NUM')]
@@ -19,9 +18,10 @@ use Tourze\ScheduleEntityCleanBundle\Attribute\AsScheduleClean;
 class RemoteCommand implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '唯一标识符'])]
     private ?int $id = 0;
 
     #[TrackColumn]
@@ -61,7 +61,7 @@ class RemoteCommand implements \Stringable
     private ?CommandStatus $status = CommandStatus::PENDING;
 
     #[TrackColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '执行时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '执行时间'])]
     private ?\DateTimeInterface $executedAt = null;
 
     #[TrackColumn]
@@ -72,13 +72,6 @@ class RemoteCommand implements \Stringable
     #[ORM\Column(nullable: true, options: ['comment' => '标签列表'])]
     private ?array $tags = null;
 
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
-
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
 
     public function getId(): ?int
     {
@@ -229,29 +222,8 @@ class RemoteCommand implements \Stringable
         return $this;
     }
 
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
 
-    public function setCreatedBy(?string $createdBy): static
-    {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): static
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }public function __toString(): string
+    public function __toString(): string
     {
         return $this->name;
     }

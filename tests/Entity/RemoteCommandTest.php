@@ -129,14 +129,14 @@ class RemoteCommandTest extends TestCase
 
     public function testGetterAndSetterForCreateTime(): void
     {
-        $createTime = new \DateTime();
+        $createTime = new \DateTimeImmutable();
         $this->command->setCreateTime($createTime);
         $this->assertSame($createTime, $this->command->getCreateTime());
     }
 
     public function testGetterAndSetterForUpdateTime(): void
     {
-        $updateTime = new \DateTime();
+        $updateTime = new \DateTimeImmutable();
         $this->command->setUpdateTime($updateTime);
         $this->assertSame($updateTime, $this->command->getUpdateTime());
     }

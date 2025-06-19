@@ -136,7 +136,8 @@ class FileTransferStatusTest extends TestCase
             // 每个状态都应该有颜色
             $this->assertNotEmpty($status->getColor());
             // isTerminal 应该返回布尔值
-            $this->assertIsBool($status->isTerminal());
+            $terminal = $status->isTerminal();
+            $this->assertThat($terminal, $this->logicalOr($this->isTrue(), $this->isFalse()));
         }
     }
 

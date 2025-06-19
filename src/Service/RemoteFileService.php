@@ -107,7 +107,7 @@ class RemoteFileService
             $sftp = new SFTP($transfer->getNode()->getSshHost(), $transfer->getNode()->getSshPort());
 
             // 登录SFTP
-            if ($transfer->getNode()->getSshPrivateKey()) {
+            if (null !== $transfer->getNode()->getSshPrivateKey() && '' !== $transfer->getNode()->getSshPrivateKey()) {
                 $key = \phpseclib3\Crypt\PublicKeyLoader::load($transfer->getNode()->getSshPrivateKey());
                 if (!$sftp->login($transfer->getNode()->getSshUser(), $key)) {
                     throw new \RuntimeException('SFTP私钥认证失败');

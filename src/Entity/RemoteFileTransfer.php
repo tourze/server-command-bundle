@@ -9,8 +9,7 @@ use ServerCommandBundle\Repository\RemoteFileTransferRepository;
 use ServerNodeBundle\Entity\Node;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 use Tourze\ScheduleEntityCleanBundle\Attribute\AsScheduleClean;
 
 #[AsScheduleClean(expression: '0 5 * * *', defaultKeepDay: 60, keepDayEnv: 'SERVER_FILE_TRANSFER_LOG_PERSIST_DAY_NUM')]
@@ -19,9 +18,10 @@ use Tourze\ScheduleEntityCleanBundle\Attribute\AsScheduleClean;
 class RemoteFileTransfer implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
+    #[ORM\Column(type: Types::INTEGER, options: ['comment' => '唯一标识符'])]
     private ?int $id = 0;
 
     #[TrackColumn]
@@ -69,11 +69,11 @@ class RemoteFileTransfer implements \Stringable
     private ?FileTransferStatus $status = FileTransferStatus::PENDING;
 
     #[TrackColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '开始传输时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '开始传输时间'])]
     private ?\DateTimeInterface $startedAt = null;
 
     #[TrackColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '完成时间'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '完成时间'])]
     private ?\DateTimeInterface $completedAt = null;
 
     #[TrackColumn]
@@ -84,13 +84,6 @@ class RemoteFileTransfer implements \Stringable
     #[ORM\Column(nullable: true, options: ['comment' => '标签列表'])]
     private ?array $tags = null;
 
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
-
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
 
     public function getId(): ?int
     {
@@ -262,32 +255,13 @@ class RemoteFileTransfer implements \Stringable
         return $this;
     }
 
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
 
-    public function setCreatedBy(?string $createdBy): static
-    {
-        $this->createdBy = $createdBy;
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): static
-    {
-        $this->updatedBy = $updatedBy;
-        return $this;
-    }public function __toString(): string
+    public function __toString(): string
     {
         return sprintf(
             '%s -> %s:%s',
             $this->name,
-            $this->node?->getName() ?? 'Unknown',
+            $this->node->getName(),
             $this->remotePath
         );
     }

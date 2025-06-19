@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/admin/terminal', name: 'admin_terminal_')]
 class TerminalController extends AbstractController
 {
     public function __construct(
@@ -18,15 +17,15 @@ class TerminalController extends AbstractController
     ) {
     }
 
-    #[Route('/execute', name: 'execute', methods: ['POST'])]
-    public function execute(Request $request): JsonResponse
+    #[Route('/admin/terminal/execute', name: 'admin_terminal_execute', methods: ['POST'])]
+    public function __invoke(Request $request): JsonResponse
     {
         $nodeId = $request->request->get('nodeId');
         $command = $request->request->get('command');
         $workingDir = $request->request->get('workingDir', '/root');
         $useSudo = filter_var($request->request->get('useSudo', 'false'), FILTER_VALIDATE_BOOLEAN);
 
-        if (!$nodeId || !$command) {
+        if (null === $nodeId || '' === $nodeId || null === $command || '' === $command) {
             return new JsonResponse([
                 'success' => false,
                 'error' => '节点ID和命令不能为空',
@@ -34,7 +33,7 @@ class TerminalController extends AbstractController
         }
 
         $node = $this->nodeRepository->find($nodeId);
-        if (!$node) {
+        if (null === $node) {
             return new JsonResponse([
                 'success' => false,
                 'error' => '节点不存在',
@@ -68,38 +67,5 @@ class TerminalController extends AbstractController
                 'error' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    #[Route('/history/{nodeId}', name: 'history', methods: ['GET'])]
-    public function history(int $nodeId): JsonResponse
-    {
-        $node = $this->nodeRepository->find($nodeId);
-        if (!$node) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => '节点不存在',
-            ], 404);
-        }
-
-        // 获取该节点最近的终端命令
-        $commands = $this->remoteCommandService->getRepository()->findTerminalCommandsByNode($node, 20);
-
-        $history = [];
-        foreach ($commands as $command) {
-            $history[] = [
-                'id' => $command->getId(),
-                'command' => $command->getCommand(),
-                'result' => $command->getResult() ?? '',
-                'status' => $command->getStatus()->value,
-                'executedAt' => $command->getExecutedAt()?->format('Y-m-d H:i:s'),
-                'executionTime' => $command->getExecutionTime(),
-                'workingDirectory' => $command->getWorkingDirectory(),
-            ];
-        }
-
-        return new JsonResponse([
-            'success' => true,
-            'history' => $history,
-        ]);
     }
 }

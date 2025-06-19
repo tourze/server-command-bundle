@@ -46,7 +46,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findPendingTransfersByNode($node);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertEmpty($result);
     }
 
     public function test_find_all_pending_transfers(): void
@@ -85,7 +84,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findAllPendingTransfers();
         $this->assertSame($expectedTransfers, $result);
-        $this->assertEmpty($result);
     }
 
     public function test_find_by_tags(): void
@@ -125,7 +123,6 @@ class RemoteFileTransferRepositoryTest extends TestCase
             
         $result = $repository->findByTags($tags);
         $this->assertSame($expectedTransfers, $result);
-        $this->assertEmpty($result);
     }
 
     public function test_find_by_tags_special_characters(): void
@@ -462,19 +459,19 @@ class RemoteFileTransferRepositoryTest extends TestCase
         $method = $reflection->getMethod('findPendingTransfersByNode');
         $returnType = $method->getReturnType();
         $this->assertNotNull($returnType);
-        $this->assertEquals('array', $returnType->getName());
+        $this->assertEquals('array', (string) $returnType);
         
         // 检查 findAllPendingTransfers 的返回类型
         $method = $reflection->getMethod('findAllPendingTransfers');
         $returnType = $method->getReturnType();
         $this->assertNotNull($returnType);
-        $this->assertEquals('array', $returnType->getName());
+        $this->assertEquals('array', (string) $returnType);
         
         // 检查 findByTags 的返回类型
         $method = $reflection->getMethod('findByTags');
         $returnType = $method->getReturnType();
         $this->assertNotNull($returnType);
-        $this->assertEquals('array', $returnType->getName());
+        $this->assertEquals('array', (string) $returnType);
     }
 
     /**
