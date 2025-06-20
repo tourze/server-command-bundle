@@ -37,7 +37,7 @@ class MaintenanceCommandFixtures extends Fixture implements DependentFixtureInte
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("已删除大于100MB的日志文件")
-            ->setExecutedAt(new \DateTime('2023-08-15 02:00:00'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-15 02:00:00'))
             ->setExecutionTime(5.21)
             ->setTimeout(300)
             ->setTags(['maintenance', 'cleanup']);
@@ -55,7 +55,7 @@ class MaintenanceCommandFixtures extends Fixture implements DependentFixtureInte
             ->setEnabled(true)
             ->setStatus(CommandStatus::FAILED)
             ->setResult("mysqldump: Got error: 1045: Access denied for user 'root'@'localhost' (using password: YES) when trying to connect")
-            ->setExecutedAt(new \DateTime('2023-08-15 03:00:00'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-15 03:00:00'))
             ->setExecutionTime(0.45)
             ->setTimeout(1800)
             ->setTags(['backup', 'database', 'mysql']);

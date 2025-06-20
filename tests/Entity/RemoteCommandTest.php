@@ -94,7 +94,7 @@ class RemoteCommandTest extends TestCase
 
     public function testGetterAndSetterForExecutedAt(): void
     {
-        $executedAt = new \DateTime();
+        $executedAt = new \DateTimeImmutable();
         $this->command->setExecutedAt($executedAt);
         $this->assertSame($executedAt, $this->command->getExecutedAt());
     }

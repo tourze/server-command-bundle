@@ -68,7 +68,7 @@ class RemoteCommandFixtures extends Fixture implements DependentFixtureInterface
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("● nginx.service - A high performance web server and a reverse proxy server\n   Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)\n   Active: active (running) since Wed 2023-08-16 14:22:33 UTC; 2s ago")
-            ->setExecutedAt(new \DateTime('2023-08-16 14:22:30'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 14:22:30'))
             ->setExecutionTime(2.53)
             ->setTimeout(120)
             ->setTags(['service', 'web']);
@@ -86,7 +86,7 @@ class RemoteCommandFixtures extends Fixture implements DependentFixtureInterface
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("Filesystem      Size  Used Avail Use% Mounted on\nudev            7.9G     0  7.9G   0% /dev\ntmpfs           1.6G  2.3M  1.6G   1% /run\n/dev/sda1        80G   25G   51G  34% /\ntmpfs           7.9G     0  7.9G   0% /dev/shm\ntmpfs           5.0M     0  5.0M   0% /run/lock")
-            ->setExecutedAt(new \DateTime('2023-08-16 15:10:12'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 15:10:12'))
             ->setExecutionTime(0.32)
             ->setTimeout(60)
             ->setTags(['system', 'monitoring']);

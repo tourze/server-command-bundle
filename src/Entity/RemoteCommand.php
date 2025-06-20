@@ -62,7 +62,7 @@ class RemoteCommand implements \Stringable
 
     #[TrackColumn]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '执行时间'])]
-    private ?\DateTimeInterface $executedAt = null;
+    private ?\DateTimeImmutable $executedAt = null;
 
     #[TrackColumn]
     #[ORM\Column(type: Types::FLOAT, nullable: true, options: ['comment' => '执行耗时(秒)'])]
@@ -186,12 +186,12 @@ class RemoteCommand implements \Stringable
         return $this;
     }
 
-    public function getExecutedAt(): ?\DateTimeInterface
+    public function getExecutedAt(): ?\DateTimeImmutable
     {
         return $this->executedAt;
     }
 
-    public function setExecutedAt(?\DateTimeInterface $executedAt): static
+    public function setExecutedAt(?\DateTimeImmutable $executedAt): static
     {
         $this->executedAt = $executedAt;
 

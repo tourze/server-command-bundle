@@ -2,7 +2,7 @@
 
 namespace ServerCommandBundle\Service;
 
-use DateTime;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SSH2;
@@ -345,7 +345,7 @@ class RemoteCommandService
         }
 
         $command->setStatus(CommandStatus::RUNNING);
-        $command->setExecutedAt(new DateTime());
+        $command->setExecutedAt(new DateTimeImmutable());
         $this->entityManager->flush();
 
         $node = $command->getNode();

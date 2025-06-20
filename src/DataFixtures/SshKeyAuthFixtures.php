@@ -34,7 +34,7 @@ class SshKeyAuthFixtures extends Fixture implements DependentFixtureInterface, F
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("2048 SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8 root@example.com (RSA)\n1024 SHA256:abcd1234567890efghij root@backup-server (DSA)")
-            ->setExecutedAt(new \DateTime('2023-08-16 16:45:30'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 16:45:30'))
             ->setExecutionTime(0.03)
             ->setTimeout(30)
             ->setTags(['ssh-key', 'test']);
@@ -52,7 +52,7 @@ class SshKeyAuthFixtures extends Fixture implements DependentFixtureInterface, F
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("root\n当前认证用户: root")
-            ->setExecutedAt(new \DateTime('2023-08-16 16:46:15'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 16:46:15'))
             ->setExecutionTime(0.01)
             ->setTimeout(30)
             ->setTags(['ssh-key', 'mixed-auth', 'test']);
@@ -70,7 +70,7 @@ class SshKeyAuthFixtures extends Fixture implements DependentFixtureInterface, F
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("/root/.ssh/id_rsa: PEM RSA private key")
-            ->setExecutedAt(new \DateTime('2023-08-16 16:47:00'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 16:47:00'))
             ->setExecutionTime(0.02)
             ->setTimeout(30)
             ->setTags(['ssh-key', 'validation']);
@@ -87,7 +87,7 @@ class SshKeyAuthFixtures extends Fixture implements DependentFixtureInterface, F
             ->setEnabled(true)
             ->setStatus(CommandStatus::COMPLETED)
             ->setResult("-rw------- 1 root root 1679 Aug 16 16:30 /root/.ssh/id_rsa\n-rw-r--r-- 1 root root  394 Aug 16 16:30 /root/.ssh/id_rsa.pub")
-            ->setExecutedAt(new \DateTime('2023-08-16 16:48:00'))
+            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 16:48:00'))
             ->setExecutionTime(0.02)
             ->setTimeout(30)
             ->setTags(['ssh-key', 'security']);
