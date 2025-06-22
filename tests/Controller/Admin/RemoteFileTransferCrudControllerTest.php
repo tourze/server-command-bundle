@@ -228,12 +228,12 @@ class RemoteFileTransferCrudControllerTest extends TestCase
     /**
      * 注意：以下方法需要完整的 Symfony 环境和依赖注入，
      * 应该在集成测试中进行测试：
-     * 
+     *
      * - retryTransfer(): 需要 AdminContext 和路由重定向
      * - cancelTransfer(): 需要 AdminContext 和路由重定向  
      * - viewLogs(): 需要 AdminContext 和路由重定向
      * - Actions的displayIf条件: 需要实际的Entity实例
-     * 
+     *
      * 这些方法的核心业务逻辑应该通过对应的 Service 层进行测试。
      */
 

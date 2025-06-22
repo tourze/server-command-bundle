@@ -183,13 +183,13 @@ class RemoteCommandCrudControllerTest extends TestCase
     /**
      * 注意：以下方法需要完整的 Symfony 环境和依赖注入，
      * 应该在集成测试中进行测试：
-     * 
+     *
      * - executeCommand(): 需要 AdminContext 和路由重定向
      * - cancelCommand(): 需要 AdminContext 和路由重定向  
      * - terminal(): 需要模板渲染和 NodeRepository
      * - createIndexQueryBuilder(): 需要完整的 Doctrine 环境
      * - 状态格式化函数的详细测试: 需要实际的Field对象
-     * 
+     *
      * 这些方法的核心业务逻辑应该通过对应的 Service 层进行测试。
      */
 
