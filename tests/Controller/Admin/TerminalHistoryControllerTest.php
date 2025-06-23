@@ -28,7 +28,7 @@ class TerminalHistoryControllerTest extends TestCase
         $command->method('getCommand')->willReturn('ls -la');
         $command->method('getResult')->willReturn('file list');
         $command->method('getStatus')->willReturn(CommandStatus::COMPLETED);
-        $command->method('getExecutedAt')->willReturn(new \DateTime('2023-01-01 12:00:00'));
+        $command->method('getExecutedAt')->willReturn(new \DateTimeImmutable('2023-01-01 12:00:00'));
         $command->method('getExecutionTime')->willReturn(0.5);
         $command->method('getWorkingDirectory')->willReturn('/root');
 
