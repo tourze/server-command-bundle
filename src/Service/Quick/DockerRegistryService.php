@@ -5,6 +5,7 @@ namespace ServerCommandBundle\Service\Quick;
 use Psr\Log\LoggerInterface;
 use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Exception\DockerRegistryException;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 
@@ -262,7 +263,7 @@ class DockerRegistryService
                 'hasError' => $hasError,
             ]);
             
-            throw new \RuntimeException($errorMsg);
+            throw DockerRegistryException::directoryCreationFailed();
         }
     }
     

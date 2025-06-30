@@ -9,6 +9,8 @@ use Psr\Log\LoggerInterface;
 use SebastianBergmann\Timer\Timer;
 use ServerCommandBundle\Entity\RemoteFileTransfer;
 use ServerCommandBundle\Enum\FileTransferStatus;
+use ServerCommandBundle\Exception\RemoteFileArgumentException;
+use ServerCommandBundle\Exception\RemoteFileException;
 use ServerCommandBundle\Repository\RemoteFileTransferRepository;
 use ServerNodeBundle\Entity\Node;
 
@@ -23,6 +25,7 @@ class RemoteFileService
         private readonly RemoteFileTransferRepository $remoteFileTransferRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
+        private readonly SshConnectionService $sshConnectionService,
         private readonly RemoteCommandService $remoteCommandService,
     ) {
     }
@@ -41,7 +44,7 @@ class RemoteFileService
     ): RemoteFileTransfer {
         // 检查本地文件是否存在
         if (!file_exists($localPath)) {
-            throw new \InvalidArgumentException("本地文件不存在: {$localPath}");
+            throw RemoteFileArgumentException::invalidArgument("本地文件不存在: {$localPath}");
         }
 
         $fileSize = filesize($localPath);
@@ -92,11 +95,11 @@ class RemoteFileService
         try {
             // 检查本地文件是否存在
             if (!file_exists($transfer->getLocalPath())) {
-                throw new \RuntimeException("本地文件不存在: {$transfer->getLocalPath()}");
+                throw RemoteFileException::fileNotExists($transfer->getLocalPath());
             }
 
             // 创建SSH连接
-            $ssh = $this->remoteCommandService->connectWithPassword(
+            $ssh = $this->sshConnectionService->connectWithPassword(
                 $transfer->getNode()->getSshHost(),
                 $transfer->getNode()->getSshPort(),
                 $transfer->getNode()->getSshUser(),
@@ -110,11 +113,11 @@ class RemoteFileService
             if (null !== $transfer->getNode()->getSshPrivateKey() && '' !== $transfer->getNode()->getSshPrivateKey()) {
                 $key = \phpseclib3\Crypt\PublicKeyLoader::load($transfer->getNode()->getSshPrivateKey());
                 if (!$sftp->login($transfer->getNode()->getSshUser(), $key)) {
-                    throw new \RuntimeException('SFTP私钥认证失败');
+                    throw RemoteFileException::connectionFailed();
                 }
             } else {
                 if (!$sftp->login($transfer->getNode()->getSshUser(), $transfer->getNode()->getSshPassword())) {
-                    throw new \RuntimeException('SFTP密码认证失败');
+                    throw RemoteFileException::connectionFailed();
                 }
             }
 
@@ -125,12 +128,12 @@ class RemoteFileService
             ]);
 
             if (!$sftp->put($transfer->getTempPath(), $transfer->getLocalPath(), SFTP::SOURCE_LOCAL_FILE)) {
-                throw new \RuntimeException('文件上传到临时目录失败');
+                throw RemoteFileException::transferExecutionFailed('文件上传到临时目录失败');
             }
 
             // 验证临时文件是否上传成功
             if (!$sftp->file_exists($transfer->getTempPath())) {
-                throw new \RuntimeException('临时文件验证失败');
+                throw RemoteFileException::transferStatusUpdateFailed();
             }
 
             $this->logger->info('文件已成功上传到临时目录', [
@@ -178,7 +181,7 @@ class RemoteFileService
             );
 
             if (!str_contains(trim($checkResult), 'exists')) {
-                throw new \RuntimeException('文件移动验证失败');
+                throw RemoteFileException::transferStatusUpdateFailed();
             }
 
             $duration = $timer->stop();

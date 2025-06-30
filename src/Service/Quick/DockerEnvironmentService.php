@@ -5,6 +5,7 @@ namespace ServerCommandBundle\Service\Quick;
 use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Exception\DockerEnvironmentException;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 
@@ -133,7 +134,7 @@ class DockerEnvironmentService
         $deployTask->appendLog('下载结果: ' . trim($downloadResult));
         
         if (stripos($downloadResult, '脚本下载失败') !== false) {
-            throw new \RuntimeException('无法下载Docker安装脚本，请检查网络连接');
+            throw DockerEnvironmentException::environmentCreateFailed();
         }
 
         // 执行Docker安装脚本
@@ -153,7 +154,7 @@ class DockerEnvironmentService
         $deployTask->appendLog('安装结果: ' . substr(trim($installResult), -500)); // 只显示最后500字符
         
         if (stripos($installResult, 'Docker安装失败') !== false) {
-            throw new \RuntimeException('Docker安装失败: ' . $installResult);
+            throw DockerEnvironmentException::environmentCreateFailed();
         }
 
         // 将当前用户添加到docker组（避免sudo）
@@ -195,7 +196,7 @@ class DockerEnvironmentService
         $deployTask->appendLog('Docker验证: ' . trim($verifyResult));
         
         if (stripos($verifyResult, 'Docker验证失败') !== false) {
-            throw new \RuntimeException('Docker安装完成但验证失败，可能需要重新登录或重启系统');
+            throw DockerEnvironmentException::environmentUpdateFailed();
         }
 
         $deployTask->appendLog('Docker安装并验证完成！');
@@ -298,7 +299,7 @@ class DockerEnvironmentService
         $deployTask->appendLog('验证结果: ' . trim($result));
         
         if (stripos($result, '验证成功') === false) {
-            throw new \RuntimeException('Docker服务启动后仍无法正常工作，请检查系统配置');
+            throw DockerEnvironmentException::environmentUpdateFailed();
         }
         
         $deployTask->appendLog('Docker环境验证通过');
@@ -326,7 +327,7 @@ class DockerEnvironmentService
                 "{$stepName}执行失败: 命令状态 " . $status->value;
                 
             $deployTask->appendLog($errorMsg);
-            throw new \RuntimeException($errorMsg);
+            throw DockerEnvironmentException::directoryCreationFailed();
         }
     }
     

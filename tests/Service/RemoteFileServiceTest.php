@@ -11,6 +11,7 @@ use ServerCommandBundle\Enum\FileTransferStatus;
 use ServerCommandBundle\Repository\RemoteFileTransferRepository;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerCommandBundle\Service\RemoteFileService;
+use ServerCommandBundle\Service\SshConnectionService;
 use ServerNodeBundle\Entity\Node;
 
 class RemoteFileServiceTest extends TestCase
@@ -18,6 +19,7 @@ class RemoteFileServiceTest extends TestCase
     private RemoteFileTransferRepository&MockObject $repository;
     private EntityManagerInterface&MockObject $entityManager;
     private LoggerInterface&MockObject $logger;
+    private SshConnectionService&MockObject $sshConnectionService;
     private RemoteCommandService&MockObject $remoteCommandService;
     private RemoteFileService $service;
 
@@ -26,12 +28,14 @@ class RemoteFileServiceTest extends TestCase
         $this->repository = $this->createMock(RemoteFileTransferRepository::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->sshConnectionService = $this->createMock(SshConnectionService::class);
         $this->remoteCommandService = $this->createMock(RemoteCommandService::class);
 
         $this->service = new RemoteFileService(
             $this->repository,
             $this->entityManager,
             $this->logger,
+            $this->sshConnectionService,
             $this->remoteCommandService
         );
     }

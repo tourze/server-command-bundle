@@ -17,7 +17,7 @@ class TerminalController extends AbstractController
     ) {
     }
 
-    #[Route('/admin/terminal/execute', name: 'admin_terminal_execute', methods: ['POST'])]
+    #[Route(path: '/admin/terminal/execute', name: 'admin_terminal_execute', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         $nodeId = $request->request->get('nodeId');

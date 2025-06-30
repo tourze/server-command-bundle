@@ -14,10 +14,10 @@ use ServerCommandBundle\Enum\FileTransferStatus;
 
 /**
  * RemoteFileTransferCrudController 单元测试
- * 
+ *
  * 注意：涉及路由重定向的方法（retryTransfer、cancelTransfer、viewLogs）
  * 应该在集成测试中进行完整测试。
- * 
+ *
  * 本测试主要验证：
  * 1. Entity FQCN 配置
  * 2. 配置方法能正常调用而不抛出异常

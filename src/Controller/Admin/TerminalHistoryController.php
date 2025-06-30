@@ -16,7 +16,7 @@ class TerminalHistoryController extends AbstractController
     ) {
     }
 
-    #[Route('/admin/terminal/history/{nodeId}', name: 'admin_terminal_history', methods: ['GET'])]
+    #[Route(path: '/admin/terminal/history/{nodeId}', name: 'admin_terminal_history', methods: ['GET'])]
     public function __invoke(int $nodeId): JsonResponse
     {
         $node = $this->nodeRepository->find($nodeId);

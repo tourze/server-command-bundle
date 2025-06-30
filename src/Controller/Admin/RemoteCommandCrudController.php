@@ -198,7 +198,7 @@ class RemoteCommandCrudController extends AbstractCrudController
     /**
      * 执行远程命令
      */
-    #[AdminAction('{entityId}/execute', 'execute_remote_command')]
+    #[AdminAction(routePath: '{entityId}/execute', routeName: 'execute_remote_command')]
     public function executeCommand(AdminContext $context, Request $request): Response
     {
         /** @var RemoteCommand $command */
@@ -217,7 +217,7 @@ class RemoteCommandCrudController extends AbstractCrudController
     /**
      * 取消远程命令
      */
-    #[AdminAction('{entityId}/cancel', 'cancel_remote_command')]
+    #[AdminAction(routePath: '{entityId}/cancel', routeName: 'cancel_remote_command')]
     public function cancelCommand(AdminContext $context, Request $request): Response
     {
         /** @var RemoteCommand $command */
@@ -237,7 +237,7 @@ class RemoteCommandCrudController extends AbstractCrudController
             ->generateUrl());
     }
 
-    #[AdminAction('terminal', 'terminal')]
+    #[AdminAction(routePath: 'terminal', routeName: 'terminal')]
     public function terminal(): Response
     {
         $nodes = $this->nodeRepository->findAll();

@@ -13,11 +13,11 @@ use ServerCommandBundle\Entity\RemoteCommand;
 
 /**
  * RemoteCommandCrudController 单元测试
- * 
+ *
  * 注意：由于 AdminUrlGenerator 是 final 类无法 mock，
  * 涉及路由重定向的方法（executeCommand、cancelCommand、terminal）
  * 应该在集成测试中进行完整测试。
- * 
+ *
  * 本测试主要验证：
  * 1. Entity FQCN 配置
  * 2. 配置方法能正常调用而不抛出异常

@@ -228,7 +228,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
     /**
      * 重新执行传输
      */
-    #[AdminAction('{entityId}/retry', 'retry_transfer')]
+    #[AdminAction(routePath: '{entityId}/retry', routeName: 'retry_transfer')]
     public function retryTransfer(AdminContext $context, Request $request): Response
     {
         $transfer = $context->getEntity()->getInstance();
@@ -260,7 +260,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
     /**
      * 取消传输
      */
-    #[AdminAction('{entityId}/cancel', 'cancel_transfer')]
+    #[AdminAction(routePath: '{entityId}/cancel', routeName: 'cancel_transfer')]
     public function cancelTransfer(AdminContext $context, Request $request): Response
     {
         $transfer = $context->getEntity()->getInstance();
@@ -279,7 +279,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
     /**
      * 查看传输日志
      */
-    #[AdminAction('{entityId}/logs', 'view_transfer_logs')]
+    #[AdminAction(routePath: '{entityId}/logs', routeName: 'view_transfer_logs')]
     public function viewLogs(AdminContext $context, Request $request): Response
     {
         $transfer = $context->getEntity()->getInstance();

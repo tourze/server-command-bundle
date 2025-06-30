@@ -11,6 +11,8 @@ use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Message\RemoteCommandExecuteMessage;
 use ServerCommandBundle\Repository\RemoteCommandRepository;
 use ServerCommandBundle\Service\RemoteCommandService;
+use ServerCommandBundle\Service\SshConnectionService;
+use ServerCommandBundle\Service\SshCommandExecutor;
 use ServerNodeBundle\Entity\Node;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -21,6 +23,8 @@ class RemoteCommandServiceTest extends TestCase
     private EntityManagerInterface&MockObject $entityManager;
     private LoggerInterface&MockObject $logger;
     private MessageBusInterface&MockObject $messageBus;
+    private SshConnectionService&MockObject $sshConnectionService;
+    private SshCommandExecutor&MockObject $sshCommandExecutor;
     private RemoteCommandService $service;
 
     protected function setUp(): void
@@ -29,12 +33,16 @@ class RemoteCommandServiceTest extends TestCase
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
+        $this->sshConnectionService = $this->createMock(SshConnectionService::class);
+        $this->sshCommandExecutor = $this->createMock(SshCommandExecutor::class);
 
         $this->service = new RemoteCommandService(
             $this->repository,
             $this->entityManager,
             $this->logger,
-            $this->messageBus
+            $this->messageBus,
+            $this->sshConnectionService,
+            $this->sshCommandExecutor
         );
     }
 

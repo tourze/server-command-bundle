@@ -4,6 +4,7 @@ namespace ServerCommandBundle\Service\Quick;
 
 use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Enum\CommandStatus;
+use ServerCommandBundle\Exception\DnsConfigurationException;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 
@@ -418,7 +419,7 @@ class DnsConfigurationService
         $dirResult = trim($checkDirCommand->getResult() ?? '');
         
         if ($dirResult !== 'DIR_EXISTS') {
-            throw new \RuntimeException('无法创建systemd-resolved配置目录');
+            throw DnsConfigurationException::directoryCreationFailed();
         }
     }
 
@@ -452,7 +453,7 @@ EOF',
         // 检查配置文件是否创建成功
         if ($configResolvedCommand->getStatus() !== CommandStatus::COMPLETED || 
             $this->checkCommandError($configResolvedCommand->getResult() ?? '')) {
-            throw new \RuntimeException('无法创建systemd-resolved配置文件: ' . ($configResolvedCommand->getResult() ?? ''));
+            throw DnsConfigurationException::configurationCreateFailed();
         }
 
         $deployTask->appendLog('systemd-resolved配置文件创建成功');
@@ -476,7 +477,7 @@ EOF',
         $this->remoteCommandService->executeCommand($restartResolvedCommand);
         
         if ($restartResolvedCommand->getStatus() !== CommandStatus::COMPLETED) {
-            throw new \RuntimeException('无法重启systemd-resolved服务');
+            throw DnsConfigurationException::configurationUpdateFailed();
         }
     }
 
@@ -727,7 +728,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         $currentConfig = trim($checkDockerConfigCommand->getResult() ?? '{}');
         
         // 解析现有配置并添加DNS设置
-        $config = json_decode($currentConfig, true) ?: [];
+        $config = json_decode($currentConfig, true) ?? [];
         $config['dns'] = ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
         
         $newConfig = json_encode($config, JSON_PRETTY_PRINT);
@@ -747,7 +748,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         if ($updateDockerConfigCommand->getStatus() === CommandStatus::COMPLETED) {
             $deployTask->appendLog('Docker DNS配置更新成功');
         } else {
-            throw new \RuntimeException('Docker DNS配置更新失败');
+            throw DnsConfigurationException::dnsmasqConfigCreateFailed();
         }
     }
 
