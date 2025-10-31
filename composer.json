@@ -38,7 +38,7 @@
     "tourze/doctrine-timestamp-bundle": "0.0.*",
     "tourze/doctrine-track-bundle": "0.1.*",
     "tourze/doctrine-user-bundle": "0.0.*",
-    "tourze/easy-admin-menu-bundle": "0.1.*",
+    "tourze/easy-admin-menu-bundle": "1.0.*",
     "tourze/enum-extra": "1.*",
     "tourze/gb-t-2659": "0.0.*",
     "tourze/server-node-bundle": "0.0.*",
@@ -52,9 +52,9 @@
     "tourze/phpunit-base": "1.*",
     "tourze/phpunit-doctrine-entity": "1.*",
     "tourze/phpunit-enum": "1.*",
-    "tourze/phpunit-symfony-kernel-test": "0.0.*",
+    "tourze/phpunit-symfony-kernel-test": "1.*",
     "tourze/phpunit-symfony-unit-test": "1.*",
-    "tourze/phpunit-symfony-web-test": "0.0.*"
+    "tourze/phpunit-symfony-web-test": "1.*"
   },
   "autoload": {
     "psr-4": {
