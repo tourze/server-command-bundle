@@ -2,9 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use RuntimeException;
-
-class DockerRegistryException extends RuntimeException
+class DockerRegistryException extends \RuntimeException
 {
     public static function configurationCreateFailed(): self
     {

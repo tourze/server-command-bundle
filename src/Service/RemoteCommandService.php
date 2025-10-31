@@ -2,8 +2,8 @@
 
 namespace ServerCommandBundle\Service;
 
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use phpseclib3\Net\SSH2;
 use Psr\Log\LoggerInterface;
 use SebastianBergmann\Timer\Timer;
@@ -14,6 +14,7 @@ use ServerCommandBundle\Repository\RemoteCommandRepository;
 use ServerNodeBundle\Entity\Node;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+#[WithMonologChannel(channel: 'server_command')]
 class RemoteCommandService
 {
     public function __construct(
@@ -28,6 +29,8 @@ class RemoteCommandService
 
     /**
      * 创建新的远程命令
+     *
+     * @param string[]|null $tags
      */
     public function createCommand(
         Node $node,
@@ -36,7 +39,7 @@ class RemoteCommandService
         ?string $workingDirectory = null,
         ?bool $useSudo = false,
         ?int $timeout = 300,
-        ?array $tags = null
+        ?array $tags = null,
     ): RemoteCommand {
         $remoteCommand = new RemoteCommand();
         $remoteCommand->setNode($node);
@@ -56,10 +59,16 @@ class RemoteCommandService
 
     /**
      * 在SSH连接上执行命令
+     *
      * @deprecated 使用 SshCommandExecutor::execute 代替
      */
-    public function execSshCommand(SSH2 $ssh, string $command, ?string $workingDirectory = null, bool $useSudo = false, ?Node $node = null): string
-    {
+    public function execSshCommand(
+        SSH2 $ssh,
+        string $command,
+        ?string $workingDirectory = null,
+        bool $useSudo = false,
+        ?Node $node = null,
+    ): string {
         return $this->sshCommandExecutor->execute($ssh, $command, $workingDirectory, $useSudo, $node);
     }
 
@@ -68,20 +77,21 @@ class RemoteCommandService
      */
     public function executeCommand(RemoteCommand $command, ?SSH2 $ssh = null): RemoteCommand
     {
-        if (!$command->isEnabled()) {
+        if (false === $command->isEnabled()) {
             $this->logger->warning('尝试执行已禁用的命令', ['command' => $command]);
+
             return $command;
         }
 
         $command->setStatus(CommandStatus::RUNNING);
-        $command->setExecutedAt(new DateTimeImmutable());
+        $command->setExecutedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
 
         $node = $command->getNode();
 
         if (null === $ssh) {
             try {
-                $ssh = $this->sshConnectionService->createConnection($node, $command->isUseSudo());
+                $ssh = $this->sshConnectionService->createConnection($node, $command->isUseSudo() ?? false);
             } catch (\Throwable $e) {
                 $command->setStatus(CommandStatus::FAILED);
                 $command->setResult('SSH连接失败: ' . $e->getMessage());
@@ -104,7 +114,7 @@ class RemoteCommandService
                 $ssh,
                 $command->getCommand(),
                 $command->getWorkingDirectory(),
-                $command->isUseSudo(),
+                $command->isUseSudo() ?? false,
                 $node
             );
 
@@ -156,6 +166,8 @@ class RemoteCommandService
 
     /**
      * 查找节点上待执行的命令
+     *
+     * @return RemoteCommand[]
      */
     public function findPendingCommandsByNode(Node $node): array
     {
@@ -164,6 +176,8 @@ class RemoteCommandService
 
     /**
      * 查找所有待执行的命令
+     *
+     * @return RemoteCommand[]
      */
     public function findAllPendingCommands(): array
     {
@@ -172,6 +186,10 @@ class RemoteCommandService
 
     /**
      * 按标签查找命令
+     *
+     * @param string[] $tags
+     *
+     * @return RemoteCommand[]
      */
     public function findByTags(array $tags): array
     {
@@ -183,7 +201,7 @@ class RemoteCommandService
      */
     public function cancelCommand(RemoteCommand $command): RemoteCommand
     {
-        if ($command->getStatus() === CommandStatus::PENDING) {
+        if (CommandStatus::PENDING === $command->getStatus()) {
             $command->setStatus(CommandStatus::CANCELED);
             $this->entityManager->flush();
 

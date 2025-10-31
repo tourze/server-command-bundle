@@ -2,13 +2,16 @@
 
 namespace ServerCommandBundle\Controller\Admin;
 
+use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminCrud;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
@@ -36,14 +39,17 @@ use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class RemoteCommandCrudController extends AbstractCrudController
+/**
+ * @extends AbstractCrudController<RemoteCommand>
+ */
+#[AdminCrud(routePath: '/server-command/remote-command', routeName: 'server_command_remote_command')]
+final class RemoteCommandCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
         private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly NodeRepository $nodeRepository,
-    )
-    {
+    ) {
     }
 
     public static function getEntityFqcn(): string
@@ -57,40 +63,49 @@ class RemoteCommandCrudController extends AbstractCrudController
             ->setEntityLabelInSingular('远程命令')
             ->setEntityLabelInPlural('远程命令')
             ->setPageTitle('index', '远程命令列表')
-            ->setPageTitle('detail', fn(RemoteCommand $command) => sprintf('命令详情: %s', $command->getName()))
-            ->setPageTitle('edit', fn(RemoteCommand $command) => sprintf('编辑命令: %s', $command->getName()))
+            ->setPageTitle('detail', fn (RemoteCommand $command) => sprintf('命令详情: %s', $command->getName()))
+            ->setPageTitle('edit', fn (RemoteCommand $command) => sprintf('编辑命令: %s', $command->getName()))
             ->setPageTitle('new', '新建远程命令')
             ->setHelp('index', '管理远程服务器上的命令执行')
             ->setDefaultSort(['createTime' => 'DESC'])
-            ->setSearchFields(['name', 'command', 'workingDirectory', 'tags', 'node.name'])
-            ->setPaginatorPageSize(20);
+            ->setSearchFields(['name', 'command', 'workingDirectory', 'node.name'])
+            ->setPaginatorPageSize(20)
+            // 强制禁用自动字段发现，防止EasyAdmin自动处理tags字段
+            ->overrideTemplate('crud/field/text', '@EasyAdmin/crud/field/text.html.twig')
+        ;
     }
 
     public function configureFields(string $pageName): iterable
     {
         yield IdField::new('id', 'ID')
             ->setMaxLength(9999)
-            ->hideOnForm();
+            ->hideOnForm()
+        ;
 
         yield AssociationField::new('node', '服务器节点')
             ->setRequired(true)
-            ->setFormTypeOption('choice_label', 'name');
+            ->setFormTypeOption('choice_label', 'name')
+        ;
 
         yield TextField::new('name', '命令名称')
-            ->setRequired(true);
+            ->setRequired(true)
+        ;
 
         yield TextareaField::new('command', '命令内容')
             ->setRequired(true)
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         // 仅在详情页显示结果
         yield TextareaField::new('result', '执行结果')
             ->hideOnForm()
             ->hideOnIndex()
-            ->setFormTypeOption('disabled', true);
+            ->setFormTypeOption('disabled', true)
+        ;
 
         yield TextField::new('workingDirectory', '工作目录')
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield BooleanField::new('useSudo', '使用sudo执行');
 
@@ -98,7 +113,8 @@ class RemoteCommandCrudController extends AbstractCrudController
 
         yield NumberField::new('timeout', '超时时间(秒)')
             ->setHelp('命令执行超时时间，单位：秒')
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield ChoiceField::new('status', '状态')
             ->setFormType(EnumType::class)
@@ -116,27 +132,40 @@ class RemoteCommandCrudController extends AbstractCrudController
                     CommandStatus::TIMEOUT => '超时',
                     CommandStatus::CANCELED => '已取消',
                 };
-            });
+            })
+        ;
 
         yield DateTimeField::new('executedAt', '执行时间')
             ->hideOnForm()
-            ->setFormat('yyyy-MM-dd HH:mm:ss');
+            ->setFormat('yyyy-MM-dd HH:mm:ss')
+        ;
 
         yield NumberField::new('executionTime', '执行耗时(秒)')
             ->hideOnForm()
-            ->setNumDecimals(3);
+            ->setNumDecimals(3)
+        ;
 
-        yield ArrayField::new('tags', '标签')
-            ->hideOnIndex();
+        // 标签字段 - 完全避免EasyAdmin访问原始tags属性
+        yield TextField::new('tagsDisplay', '标签')
+            ->hideOnForm()
+        ;
+
+        // 表单中使用隐藏的字符串字段而不是ArrayField
+        yield TextField::new('tagsRaw', '标签（JSON格式）')
+            ->onlyOnForms()
+            ->setHelp('请输入JSON格式的标签数组，例如：["tag1","tag2"]')
+        ;
 
         yield DateTimeField::new('createTime', '创建时间')
             ->hideOnForm()
-            ->setFormat('yyyy-MM-dd HH:mm:ss');
+            ->setFormat('yyyy-MM-dd HH:mm:ss')
+        ;
 
         yield DateTimeField::new('updateTime', '更新时间')
             ->hideOnForm()
             ->hideOnIndex()
-            ->setFormat('yyyy-MM-dd HH:mm:ss');
+            ->setFormat('yyyy-MM-dd HH:mm:ss')
+        ;
     }
 
     public function configureFilters(Filters $filters): Filters
@@ -157,7 +186,8 @@ class RemoteCommandCrudController extends AbstractCrudController
                     '已取消' => CommandStatus::CANCELED->value,
                 ]))
             ->add(DateTimeFilter::new('executedAt', '执行时间'))
-            ->add(DateTimeFilter::new('createTime', '创建时间'));
+            ->add(DateTimeFilter::new('createTime', '创建时间'))
+        ;
     }
 
     public function configureActions(Actions $actions): Actions
@@ -165,18 +195,21 @@ class RemoteCommandCrudController extends AbstractCrudController
         $executeAction = Action::new('execute', '执行命令')
             ->linkToCrudAction('executeCommand')
             ->setCssClass('btn btn-success')
-            ->setIcon('fa fa-play');
+            ->setIcon('fa fa-play')
+        ;
 
         $cancelAction = Action::new('cancel', '取消命令')
             ->linkToCrudAction('cancelCommand')
             ->setCssClass('btn btn-danger')
-            ->setIcon('fa fa-times');
+            ->setIcon('fa fa-times')
+        ;
 
         $sync = Action::new('terminal', '终端视图')
             ->linkToCrudAction('terminal')
             ->createAsGlobalAction()
             ->setCssClass('btn btn-primary')
-            ->setIcon('fa fa-terminal');
+            ->setIcon('fa fa-terminal')
+        ;
 
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
@@ -184,15 +217,65 @@ class RemoteCommandCrudController extends AbstractCrudController
             ->add(Crud::PAGE_INDEX, $executeAction)
             ->add(Crud::PAGE_DETAIL, $executeAction)
             ->add(Crud::PAGE_DETAIL, $cancelAction)
-            ->reorder(Crud::PAGE_INDEX, [Action::DETAIL, Action::EDIT, Action::DELETE]);
+        ;
     }
 
-    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): \Doctrine\ORM\QueryBuilder
+    public function createIndexQueryBuilder(
+        SearchDto $searchDto,
+        EntityDto $entityDto,
+        FieldCollection $fields,
+        FilterCollection $filters,
+    ): QueryBuilder {
+        $queryBuilder = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+
+        if (!$this->hasNodeJoin($queryBuilder)) {
+            $queryBuilder->leftJoin('entity.node', 'node');
+        }
+
+        return $queryBuilder->orderBy('entity.createTime', 'DESC');
+    }
+
+    private function hasNodeJoin(QueryBuilder $queryBuilder): bool
     {
-        return parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters)
-            ->select('entity')
-            ->leftJoin('entity.node', 'node')
-            ->orderBy('entity.createTime', 'DESC');
+        $joins = $queryBuilder->getDQLPart('join');
+
+        if (!is_iterable($joins)) {
+            return false;
+        }
+
+        foreach ($joins as $joinArray) {
+            if ($this->hasNodeJoinInArray($joinArray)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasNodeJoinInArray(mixed $joinArray): bool
+    {
+        if (!is_iterable($joinArray)) {
+            return false;
+        }
+
+        foreach ($joinArray as $join) {
+            if ($this->isNodeJoin($join)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isNodeJoin(mixed $join): bool
+    {
+        if (!is_object($join) || !method_exists($join, 'getJoin')) {
+            return false;
+        }
+
+        $joinValue = $join->getJoin();
+
+        return is_string($joinValue) && str_contains($joinValue, 'entity.node');
     }
 
     /**
@@ -201,8 +284,8 @@ class RemoteCommandCrudController extends AbstractCrudController
     #[AdminAction(routePath: '{entityId}/execute', routeName: 'execute_remote_command')]
     public function executeCommand(AdminContext $context, Request $request): Response
     {
-        /** @var RemoteCommand $command */
         $command = $context->getEntity()->getInstance();
+        assert($command instanceof RemoteCommand);
 
         $this->remoteCommandService->executeCommand($command);
         $this->addFlash('success', sprintf('命令 %s 已开始执行', $command->getName()));
@@ -220,10 +303,10 @@ class RemoteCommandCrudController extends AbstractCrudController
     #[AdminAction(routePath: '{entityId}/cancel', routeName: 'cancel_remote_command')]
     public function cancelCommand(AdminContext $context, Request $request): Response
     {
-        /** @var RemoteCommand $command */
         $command = $context->getEntity()->getInstance();
+        assert($command instanceof RemoteCommand);
 
-        if ($command->getStatus() === CommandStatus::PENDING) {
+        if (CommandStatus::PENDING === $command->getStatus()) {
             $this->remoteCommandService->cancelCommand($command);
             $this->addFlash('success', sprintf('命令 %s 已取消', $command->getName()));
         } else {

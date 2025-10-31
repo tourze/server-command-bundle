@@ -7,10 +7,12 @@ use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Exception\DnsConfigurationException;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 /**
  * DNS配置服务
  */
+#[Autoconfigure(public: true)]
 class DnsConfigurationService
 {
     public function __construct(
@@ -35,7 +37,7 @@ class DnsConfigurationService
         $isDnsPolluted = $this->analyzeDnsTestResults($deployTask, $dnsTestResult, $googleDnsResult);
 
         // 测试解析出的IP是否能正常连接Docker Hub
-        if (!$isDnsPolluted && !empty($dnsTestResult) && $dnsTestResult !== 'DNS_FAILED') {
+        if (!$isDnsPolluted && '' !== $dnsTestResult && 'DNS_FAILED' !== $dnsTestResult) {
             $isDnsPolluted = $this->testDockerHubConnectivity($deployTask, $node, $dnsTestResult);
         }
 
@@ -64,7 +66,8 @@ class DnsConfigurationService
         $dnsTestCommand = $this->remoteCommandService->createCommand(
             $node,
             '检测DNS解析',
-            'nslookup registry-1.docker.io 2>/dev/null | grep "Address:" | tail -1 | cut -d" " -f2 2>/dev/null || echo "DNS_FAILED"',
+            'nslookup registry-1.docker.io 2>/dev/null | grep "Address:" | tail -1 | ' .
+            'cut -d" " -f2 2>/dev/null || echo "DNS_FAILED"',
             null,
             false,
             10,
@@ -86,7 +89,8 @@ class DnsConfigurationService
         $googleDnsTestCommand = $this->remoteCommandService->createCommand(
             $node,
             '使用Google DNS测试',
-            'nslookup registry-1.docker.io 8.8.8.8 2>/dev/null | grep "Address:" | tail -1 | cut -d" " -f2 2>/dev/null || echo "DNS_FAILED"',
+            'nslookup registry-1.docker.io 8.8.8.8 2>/dev/null | grep "Address:" | ' .
+            'tail -1 | cut -d" " -f2 2>/dev/null || echo "DNS_FAILED"',
             null,
             false,
             10,
@@ -96,7 +100,7 @@ class DnsConfigurationService
         $this->remoteCommandService->executeCommand($googleDnsTestCommand);
         $googleDnsResult = trim($googleDnsTestCommand->getResult() ?? '');
         $deployTask->appendLog('Google DNS解析结果: ' . $googleDnsResult);
-        
+
         return $googleDnsResult;
     }
 
@@ -105,16 +109,18 @@ class DnsConfigurationService
      */
     private function analyzeDnsTestResults(ProgressModel $deployTask, string $dnsResult, string $googleDnsResult): bool
     {
-        if ($dnsResult === 'DNS_FAILED' || empty($dnsResult)) {
+        if ('DNS_FAILED' === $dnsResult || '' === $dnsResult) {
             $deployTask->appendLog('检测到DNS解析失败');
+
             return true;
         }
-        
-        if ($googleDnsResult !== 'DNS_FAILED' && !empty($googleDnsResult) && $dnsResult !== $googleDnsResult) {
+
+        if ('DNS_FAILED' !== $googleDnsResult && '' !== $googleDnsResult && $dnsResult !== $googleDnsResult) {
             $deployTask->appendLog('检测到DNS解析结果不一致，可能存在DNS污染');
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -124,11 +130,13 @@ class DnsConfigurationService
     private function testDockerHubConnectivity(ProgressModel $deployTask, Node $node, string $resolvedIp): bool
     {
         $deployTask->appendLog("测试解析IP {$resolvedIp} 的连通性...");
-        
+
         $connectTestCommand = $this->remoteCommandService->createCommand(
             $node,
             '测试解析IP连通性',
-            "curl -s --max-time 10 --connect-timeout 5 -I \"https://{$resolvedIp}/v2/\" -H \"Host: registry-1.docker.io\" 2>/dev/null | head -1 | grep -q \"200\\|401\" && echo \"IP_CONNECT_OK\" || echo \"IP_CONNECT_FAILED\"",
+            "curl -s --max-time 10 --connect-timeout 5 -I \"https://{$resolvedIp}/v2/\" " .
+            '-H "Host: registry-1.docker.io" 2>/dev/null | head -1 | ' .
+            'grep -q "200\|401" && echo "IP_CONNECT_OK" || echo "IP_CONNECT_FAILED"',
             null,
             false,
             15,
@@ -139,8 +147,9 @@ class DnsConfigurationService
         $connectResult = trim($connectTestCommand->getResult() ?? '');
         $deployTask->appendLog("IP连通性测试结果: {$connectResult}");
 
-        if ($connectResult === 'IP_CONNECT_FAILED') {
+        if ('IP_CONNECT_FAILED' === $connectResult) {
             $deployTask->appendLog("解析的IP {$resolvedIp} 无法正常连接Docker Hub");
+
             return true;
         }
 
@@ -155,7 +164,8 @@ class DnsConfigurationService
         $connectTestCommand = $this->remoteCommandService->createCommand(
             $node,
             '测试Docker Hub连接',
-            'curl -s --max-time 5 -I "https://registry-1.docker.io/v2/" 2>/dev/null | head -1 | grep -q "200\\|401" && echo "CONNECT_OK" || echo "CONNECT_FAILED"',
+            'curl -s --max-time 5 -I "https://registry-1.docker.io/v2/" 2>/dev/null | ' .
+            'head -1 | grep -q "200\|401" && echo "CONNECT_OK" || echo "CONNECT_FAILED"',
             null,
             false,
             10,
@@ -166,11 +176,12 @@ class DnsConfigurationService
         $connectResult = trim($connectTestCommand->getResult() ?? '');
         $deployTask->appendLog('Docker Hub连接测试: ' . $connectResult);
 
-        if ($connectResult === 'CONNECT_FAILED') {
+        if ('CONNECT_FAILED' === $connectResult) {
             $deployTask->appendLog('检测到Docker Hub连接失败');
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -187,7 +198,7 @@ class DnsConfigurationService
 
         $dnsConfigured = false;
 
-        if ($systemdStatus === 'active') {
+        if ('active' === $systemdStatus) {
             // 尝试使用systemd-resolved配置DNS
             try {
                 $this->configureSystemdResolvedDns($deployTask, $node);
@@ -246,7 +257,7 @@ class DnsConfigurationService
         $this->remoteCommandService->executeCommand($checkSystemdCommand);
         $systemdStatus = trim($checkSystemdCommand->getResult() ?? '');
         $deployTask->appendLog('systemd-resolved状态: ' . $systemdStatus);
-        
+
         return $systemdStatus;
     }
 
@@ -263,6 +274,7 @@ class DnsConfigurationService
         // 方法1：使用resolvectl直接配置（推荐）
         if ($this->configureUsingResolvectl($deployTask, $node)) {
             $deployTask->appendLog('通过resolvectl配置DNS成功');
+
             return;
         }
 
@@ -318,9 +330,10 @@ class DnsConfigurationService
 
         $this->remoteCommandService->executeCommand($interfaceCommand);
         $interface = trim($interfaceCommand->getResult() ?? '');
-        
-        if (empty($interface)) {
+
+        if ('' === $interface) {
             $deployTask->appendLog('无法获取网络接口，使用备选方法');
+
             return false;
         }
 
@@ -338,10 +351,11 @@ class DnsConfigurationService
         );
 
         $this->remoteCommandService->executeCommand($dnsConfigCommand);
-        
-        if ($dnsConfigCommand->getStatus() === CommandStatus::COMPLETED && 
-            !$this->checkCommandError($dnsConfigCommand->getResult() ?? '')) {
-            
+
+        if (
+            CommandStatus::COMPLETED === $dnsConfigCommand->getStatus()
+            && !$this->checkCommandError($dnsConfigCommand->getResult() ?? '')
+        ) {
             // 设置全局DNS域
             $domainCommand = $this->remoteCommandService->createCommand(
                 $node,
@@ -354,7 +368,7 @@ class DnsConfigurationService
             );
 
             $this->remoteCommandService->executeCommand($domainCommand);
-            
+
             // 刷新DNS缓存
             $flushCommand = $this->remoteCommandService->createCommand(
                 $node,
@@ -367,8 +381,9 @@ class DnsConfigurationService
             );
 
             $this->remoteCommandService->executeCommand($flushCommand);
-            
+
             $deployTask->appendLog('DNS配置和缓存刷新完成');
+
             return true;
         }
 
@@ -403,7 +418,7 @@ class DnsConfigurationService
         );
 
         $this->remoteCommandService->executeCommand($createDirCommand);
-        
+
         // 检查目录创建是否成功
         $checkDirCommand = $this->remoteCommandService->createCommand(
             $node,
@@ -417,8 +432,8 @@ class DnsConfigurationService
 
         $this->remoteCommandService->executeCommand($checkDirCommand);
         $dirResult = trim($checkDirCommand->getResult() ?? '');
-        
-        if ($dirResult !== 'DIR_EXISTS') {
+
+        if ('DIR_EXISTS' !== $dirResult) {
             throw DnsConfigurationException::directoryCreationFailed();
         }
     }
@@ -449,10 +464,12 @@ EOF',
         );
 
         $this->remoteCommandService->executeCommand($configResolvedCommand);
-        
+
         // 检查配置文件是否创建成功
-        if ($configResolvedCommand->getStatus() !== CommandStatus::COMPLETED || 
-            $this->checkCommandError($configResolvedCommand->getResult() ?? '')) {
+        if (
+            CommandStatus::COMPLETED !== $configResolvedCommand->getStatus()
+            || $this->checkCommandError($configResolvedCommand->getResult() ?? '')
+        ) {
             throw DnsConfigurationException::configurationCreateFailed();
         }
 
@@ -475,8 +492,8 @@ EOF',
         );
 
         $this->remoteCommandService->executeCommand($restartResolvedCommand);
-        
-        if ($restartResolvedCommand->getStatus() !== CommandStatus::COMPLETED) {
+
+        if (CommandStatus::COMPLETED !== $restartResolvedCommand->getStatus()) {
             throw DnsConfigurationException::configurationUpdateFailed();
         }
     }
@@ -530,9 +547,9 @@ EOF',
         $this->prepareResolveConf($deployTask, $node);
 
         // 尝试多种方法创建DNS配置
-        $dnsConfigured = $this->tryCreateResolveConf($deployTask, $node) ||
-                        $this->tryCreateResolveConfWithTemp($deployTask, $node) ||
-                        $this->configureDockerDns($deployTask, $node);
+        $dnsConfigured = $this->tryCreateResolveConf($deployTask, $node)
+                        || $this->tryCreateResolveConfWithTemp($deployTask, $node)
+                        || $this->configureDockerDns($deployTask, $node);
 
         if (!$dnsConfigured) {
             $deployTask->appendLog('所有DNS配置方法都失败了，但将继续部署');
@@ -582,7 +599,7 @@ EOF',
     private function tryCreateResolveConf(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('尝试直接创建DNS配置...');
-        
+
         $newDnsCommand = $this->remoteCommandService->createCommand(
             $node,
             '创建DNS配置文件',
@@ -599,17 +616,19 @@ EOF',
         );
 
         $this->remoteCommandService->executeCommand($newDnsCommand);
-        
-        if ($newDnsCommand->getStatus() === CommandStatus::COMPLETED && 
-            !$this->checkCommandError($newDnsCommand->getResult() ?? '')) {
-            
+
+        if (
+            CommandStatus::COMPLETED === $newDnsCommand->getStatus()
+            && !$this->checkCommandError($newDnsCommand->getResult() ?? '')
+        ) {
             $deployTask->appendLog('DNS配置文件创建成功');
-            
+
             // 设置immutable属性防止被覆盖
             $this->protectResolveConf($deployTask, $node);
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -638,7 +657,7 @@ EOF',
     private function tryCreateResolveConfWithTemp(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('使用临时文件创建DNS配置...');
-        
+
         $tempDnsCommand = $this->remoteCommandService->createCommand(
             $node,
             '使用临时文件创建DNS配置',
@@ -656,13 +675,16 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         );
 
         $this->remoteCommandService->executeCommand($tempDnsCommand);
-        
-        if ($tempDnsCommand->getStatus() === CommandStatus::COMPLETED && 
-            !$this->checkCommandError($tempDnsCommand->getResult() ?? '')) {
+
+        if (
+            CommandStatus::COMPLETED === $tempDnsCommand->getStatus()
+            && !$this->checkCommandError($tempDnsCommand->getResult() ?? '')
+        ) {
             $deployTask->appendLog('使用临时文件成功创建DNS配置');
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -672,20 +694,21 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     private function configureDockerDns(ProgressModel $deployTask, Node $node): bool
     {
         $deployTask->appendLog('配置Docker daemon DNS设置...');
-        
+
         try {
             // 确保Docker配置目录存在
             $this->ensureDockerConfigDirectory($deployTask, $node);
-            
+
             // 更新Docker daemon配置
             $this->updateDockerDaemonConfig($deployTask, $node);
-            
+
             // 重启Docker应用配置
             $this->restartDockerForDns($deployTask, $node);
-            
+
             return true;
         } catch (\Throwable $e) {
             $deployTask->appendLog('Docker DNS配置失败: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -726,13 +749,14 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
 
         $this->remoteCommandService->executeCommand($checkDockerConfigCommand);
         $currentConfig = trim($checkDockerConfigCommand->getResult() ?? '{}');
-        
+
         // 解析现有配置并添加DNS设置
-        $config = json_decode($currentConfig, true) ?? [];
+        $decoded = json_decode($currentConfig, true);
+        $config = is_array($decoded) ? $decoded : [];
         $config['dns'] = ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
-        
+
         $newConfig = json_encode($config, JSON_PRETTY_PRINT);
-        
+
         $updateDockerConfigCommand = $this->remoteCommandService->createCommand(
             $node,
             '更新Docker DNS配置',
@@ -744,8 +768,8 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         );
 
         $this->remoteCommandService->executeCommand($updateDockerConfigCommand);
-        
-        if ($updateDockerConfigCommand->getStatus() === CommandStatus::COMPLETED) {
+
+        if (CommandStatus::COMPLETED === $updateDockerConfigCommand->getStatus()) {
             $deployTask->appendLog('Docker DNS配置更新成功');
         } else {
             throw DnsConfigurationException::dnsmasqConfigCreateFailed();
@@ -830,7 +854,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         ];
 
         foreach ($errorPatterns as $pattern) {
-            if (stripos($output, $pattern) !== false) {
+            if (false !== stripos($output, $pattern)) {
                 return true;
             }
         }
@@ -844,17 +868,17 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
     private function verifyDnsAfterFix(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('验证DNS修复效果...');
-        
+
         // 等待DNS配置生效
         sleep(3);
-        
+
         // 重新测试DNS解析
         $newDnsResult = $this->performDnsTest($deployTask, $node);
         $deployTask->appendLog("修复后DNS解析结果: {$newDnsResult}");
-        
+
         // 测试Docker Hub连接
         $connectResult = $this->testDockerHubConnection($deployTask, $node);
-        
+
         if ($connectResult) {
             $deployTask->appendLog('⚠️ DNS修复后仍无法正常连接Docker Hub，可能存在网络防火墙限制');
         } else {

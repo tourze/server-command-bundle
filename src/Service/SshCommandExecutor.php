@@ -2,10 +2,12 @@
 
 namespace ServerCommandBundle\Service;
 
+use Monolog\Attribute\WithMonologChannel;
 use phpseclib3\Net\SSH2;
 use Psr\Log\LoggerInterface;
 use ServerNodeBundle\Entity\Node;
 
+#[WithMonologChannel(channel: 'server_command')]
 class SshCommandExecutor
 {
     public function __construct(
@@ -21,7 +23,7 @@ class SshCommandExecutor
         string $command,
         ?string $workingDirectory = null,
         bool $useSudo = false,
-        ?Node $node = null
+        ?Node $node = null,
     ): string {
         // 根据是否需要sudo执行不同的命令
         if ($useSudo && null !== $node && 'root' !== $node->getSshUser()) {
@@ -38,7 +40,7 @@ class SshCommandExecutor
         SSH2 $ssh,
         string $command,
         ?string $workingDirectory,
-        Node $node
+        Node $node,
     ): string {
         $this->logger->debug('执行sudo命令', [
             'command' => $command,
@@ -46,23 +48,46 @@ class SshCommandExecutor
             'node' => $node->getId(),
         ]);
 
-        // 使用sudo执行命令，通过shell -c来处理工作目录
+        $sudoCommand = $this->buildSudoCommand($command, $workingDirectory, $node);
+        $result = $ssh->exec($sudoCommand);
+
+        return is_string($result) ? $result : '';
+    }
+
+    /**
+     * 构建sudo命令字符串
+     */
+    private function buildSudoCommand(string $command, ?string $workingDirectory, Node $node): string
+    {
+        $finalCommand = $this->prepareFinalCommand($command, $workingDirectory);
+
+        return $this->addSudoPrefix($finalCommand, $node);
+    }
+
+    /**
+     * 准备最终执行的命令
+     */
+    private function prepareFinalCommand(string $command, ?string $workingDirectory): string
+    {
         if (null !== $workingDirectory && '' !== $workingDirectory) {
-            // 使用bash -c来组合cd和命令，然后用sudo执行
-            $shellCommand = "cd {$workingDirectory} && {$command}";
-            if (null !== $node->getSshPassword() && '' !== $node->getSshPassword()) {
-                return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S bash -c " . escapeshellarg($shellCommand));
-            } else {
-                return $ssh->exec("sudo -S bash -c " . escapeshellarg($shellCommand));
-            }
-        } else {
-            // 没有工作目录时直接sudo执行命令
-            if (null !== $node->getSshPassword() && '' !== $node->getSshPassword()) {
-                return $ssh->exec("printf '%s\\n\\n' '{$node->getSshPassword()}' | sudo -S {$command}");
-            } else {
-                return $ssh->exec("sudo -S {$command}");
-            }
+            return 'bash -c ' . escapeshellarg("cd {$workingDirectory} && {$command}");
         }
+
+        return $command;
+    }
+
+    /**
+     * 添加sudo前缀和密码处理
+     */
+    private function addSudoPrefix(string $command, Node $node): string
+    {
+        $password = $node->getSshPassword();
+
+        if (null !== $password && '' !== $password) {
+            return "printf '%s\\n\\n' '{$password}' | sudo -S {$command}";
+        }
+
+        return "sudo -S {$command}";
     }
 
     /**
@@ -71,16 +96,18 @@ class SshCommandExecutor
     private function executeNormal(
         SSH2 $ssh,
         string $command,
-        ?string $workingDirectory
+        ?string $workingDirectory,
     ): string {
         $fullCommand = $command;
 
         // 如果有工作目录，将cd命令和实际命令组合
-        if ($workingDirectory !== null) {
+        if (null !== $workingDirectory) {
             $fullCommand = "cd {$workingDirectory} && {$command}";
         }
 
         // 直接执行命令
-        return $ssh->exec($fullCommand);
+        $result = $ssh->exec($fullCommand);
+
+        return is_string($result) ? $result : '';
     }
 }

@@ -7,10 +7,12 @@ use Doctrine\Persistence\ManagerRegistry;
 use ServerCommandBundle\Entity\RemoteFileTransfer;
 use ServerCommandBundle\Enum\FileTransferStatus;
 use ServerNodeBundle\Entity\Node;
+use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
 
 /**
  * @extends ServiceEntityRepository<RemoteFileTransfer>
  */
+#[AsRepository(entityClass: RemoteFileTransfer::class)]
 class RemoteFileTransferRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -20,9 +22,12 @@ class RemoteFileTransferRepository extends ServiceEntityRepository
 
     /**
      * 查找指定节点上待传输的文件
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findPendingTransfersByNode(Node $node): array
     {
+        /** @var RemoteFileTransfer[] */
         return $this->createQueryBuilder('t')
             ->where('t.node = :node')
             ->andWhere('t.status = :status')
@@ -32,14 +37,18 @@ class RemoteFileTransferRepository extends ServiceEntityRepository
             ->setParameter('enabled', true)
             ->orderBy('t.createTime', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
      * 查找所有待传输的文件
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findAllPendingTransfers(): array
     {
+        /** @var RemoteFileTransfer[] */
         return $this->createQueryBuilder('t')
             ->where('t.status = :status')
             ->andWhere('t.enabled = :enabled')
@@ -47,44 +56,64 @@ class RemoteFileTransferRepository extends ServiceEntityRepository
             ->setParameter('enabled', true)
             ->orderBy('t.createTime', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
      * 按标签查找文件传输记录
+     *
+     * @param string[] $tags
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findByTags(array $tags): array
     {
         $qb = $this->createQueryBuilder('t');
+        $qb->where('t.tagsJsonData IS NOT NULL');
 
+        $orConditions = [];
         foreach ($tags as $index => $tag) {
-            $qb->andWhere("JSON_CONTAINS(t.tags, :tag{$index}) = 1")
-               ->setParameter("tag{$index}", json_encode($tag));
+            $orConditions[] = $qb->expr()->like('t.tagsJsonData', ":tag{$index}");
+            $qb->setParameter("tag{$index}", '%"' . $tag . '"%');
         }
 
+        if (count($orConditions) > 0) {
+            $qb->andWhere($qb->expr()->orX(...$orConditions));
+        }
+
+        /** @var RemoteFileTransfer[] */
         return $qb->orderBy('t.createTime', 'DESC')
-                 ->getQuery()
-                 ->getResult();
+            ->getQuery()
+            ->getResult()
+        ;
     }
 
     /**
      * 查找指定状态的传输记录
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findByStatus(FileTransferStatus $status): array
     {
+        /** @var RemoteFileTransfer[] */
         return $this->createQueryBuilder('t')
             ->where('t.status = :status')
             ->setParameter('status', $status)
             ->orderBy('t.createTime', 'DESC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
      * 查找指定时间范围内的传输记录
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findByDateRange(\DateTimeInterface $startDate, \DateTimeInterface $endDate): array
     {
+        /** @var RemoteFileTransfer[] */
         return $this->createQueryBuilder('t')
             ->where('t.createTime >= :startDate')
             ->andWhere('t.createTime <= :endDate')
@@ -92,11 +121,14 @@ class RemoteFileTransferRepository extends ServiceEntityRepository
             ->setParameter('endDate', $endDate)
             ->orderBy('t.createTime', 'DESC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
      * 查找失败的传输记录
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findFailedTransfers(): array
     {
@@ -105,9 +137,29 @@ class RemoteFileTransferRepository extends ServiceEntityRepository
 
     /**
      * 查找已完成的传输记录
+     *
+     * @return RemoteFileTransfer[]
      */
     public function findCompletedTransfers(): array
     {
         return $this->findByStatus(FileTransferStatus::COMPLETED);
+    }
+
+    public function save(RemoteFileTransfer $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function remove(RemoteFileTransfer $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 }

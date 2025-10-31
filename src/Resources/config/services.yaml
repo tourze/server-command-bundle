@@ -8,8 +8,6 @@ services:
     resource: '../../Command/'
   ServerCommandBundle\Controller\:
     resource: '../../Controller/'
-  ServerCommandBundle\DataFixtures\:
-    resource: '../../DataFixtures/'
   ServerCommandBundle\MessageHandler\:
     resource: '../../MessageHandler/'
   ServerCommandBundle\Repository\:

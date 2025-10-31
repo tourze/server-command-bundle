@@ -2,9 +2,11 @@
 
 namespace ServerCommandBundle\Service\Quick;
 
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
+use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Exception\DockerRegistryException;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
@@ -13,6 +15,7 @@ use ServerNodeBundle\Entity\Node;
  * Docker镜像仓库服务
  * 负责检测服务器位置并配置适当的Docker镜像注册表加速器
  */
+#[WithMonologChannel(channel: 'server_command')]
 class DockerRegistryService
 {
     public function __construct(
@@ -106,12 +109,16 @@ class DockerRegistryService
     /**
      * 检测服务器位置
      */
+    /**
+     * @return array{country: string, countryCode: string}
+     */
     private function detectServerLocation(ProgressModel $deployTask, Node $node): array
     {
         $ipCheckCommand = $this->remoteCommandService->createCommand(
             $node,
             '检测服务器IP位置',
-            'curl -s --max-time 10 "http://ip-api.com/json/?fields=country,countryCode" 2>/dev/null || echo "{\"country\":\"Unknown\"}"',
+            'curl -s --max-time 10 "http://ip-api.com/json/?fields=country,countryCode" '
+                . '2>/dev/null || echo "{\"country\":\"Unknown\"}"',
             null,
             false,
             15,
@@ -123,23 +130,27 @@ class DockerRegistryService
         $deployTask->appendLog('IP检测结果: ' . trim($ipResult));
 
         // 解析结果
-        $locationData = json_decode(trim($ipResult), true);
-        
+        $decoded = json_decode(trim($ipResult), true);
+        $locationData = is_array($decoded) ? $decoded : [];
+
         return [
-            'country' => $locationData['country'] ?? 'Unknown',
-            'countryCode' => $locationData['countryCode'] ?? 'Unknown'
+            'country' => is_string($locationData['country'] ?? null) ? $locationData['country'] : 'Unknown',
+            'countryCode' => is_string($locationData['countryCode'] ?? null) ? $locationData['countryCode'] : 'Unknown',
         ];
     }
 
     /**
      * 判断是否为中国大陆
      */
+    /**
+     * @param array{country: string, countryCode: string} $locationInfo
+     */
     private function isChinaMainland(array $locationInfo): bool
     {
         $country = $locationInfo['country'];
         $countryCode = $locationInfo['countryCode'];
-        
-        return in_array($countryCode, ['CN', 'China']) || stripos($country, 'China') !== false;
+
+        return in_array($countryCode, ['CN', 'China'], true) || false !== stripos($country, 'China');
     }
 
     /**
@@ -187,11 +198,11 @@ class DockerRegistryService
             'registry-mirrors' => [
                 'https://docker.1panel.live',
                 'https://dockerhub.azk8s.cn',
-                'https://docker.mirrors.ustc.edu.cn'
+                'https://docker.mirrors.ustc.edu.cn',
             ],
             'insecure-registries' => [],
             'debug' => false,
-            'experimental' => false
+            'experimental' => false,
         ], JSON_PRETTY_PRINT);
 
         $configCommand = $this->remoteCommandService->createCommand(
@@ -234,14 +245,14 @@ class DockerRegistryService
     {
         $result = $command->getResult() ?? '';
         $status = $command->getStatus();
-        
+
         // 检查命令是否真正成功执行
         $hasError = $this->checkCommandError($result);
-        
-        if ($status === \ServerCommandBundle\Enum\CommandStatus::COMPLETED && !$hasError) {
+
+        if (CommandStatus::COMPLETED === $status && !$hasError) {
             $deployTask->appendLog("{$stepName}执行成功");
             if ('' !== $result) {
-                $deployTask->appendLog("执行结果: " . trim($result));
+                $deployTask->appendLog('执行结果: ' . trim($result));
             }
             $this->logger->info('Docker注册表步骤执行成功', [
                 'step' => $stepName,
@@ -249,59 +260,77 @@ class DockerRegistryService
                 'result' => $result,
             ]);
         } else {
-            $errorMsg = $hasError ? 
-                "{$stepName}执行失败: " . trim($result) : 
-                "{$stepName}执行失败: 命令状态 " . $status->value;
-                
+            $errorMsg = $hasError
+                ? "{$stepName}执行失败: " . trim($result)
+                : "{$stepName}执行失败: 命令状态 " . ($status->value ?? 'unknown');
+
             $deployTask->appendLog($errorMsg);
-            
+
             $this->logger->error('Docker注册表步骤执行失败', [
                 'step' => $stepName,
                 'command' => $command->getCommand(),
                 'result' => $result,
-                'status' => $status->value,
+                'status' => $status->value ?? 'unknown',
                 'hasError' => $hasError,
             ]);
-            
+
             throw DockerRegistryException::directoryCreationFailed();
         }
     }
-    
+
+    private const ERROR_PATTERNS = [
+        'ERROR:',
+        'Error:',
+        'FAILED',
+        'failed to',
+        'Cannot connect to the Docker daemon',
+        'docker: Error response from daemon',
+        'No such file or directory',
+        'Permission denied',
+        'command not found',
+        'Operation not permitted',
+        'Access denied',
+    ];
+
     /**
      * 检查命令输出中是否包含错误信息
      */
     private function checkCommandError(string $output): bool
     {
-        $errorPatterns = [
-            'ERROR:',
-            'Error:',
-            'FAILED',
-            'failed to',
-            'Cannot connect to the Docker daemon',
-            'docker: Error response from daemon',
-            'No such file or directory',
-            'Permission denied',
-            'command not found',
-            'Operation not permitted',
-            'Access denied',
-        ];
-
-        // 先检查是否有sudo密码提示，如果只是密码提示不算错误
-        if (preg_match('/^\[sudo\] password for .+:/', trim($output))) {
+        if ($this->isSudoPasswordPrompt($output)) {
             return false;
         }
 
-        foreach ($errorPatterns as $pattern) {
-            if (stripos($output, $pattern) !== false) {
-                // 进一步检查是否是在sudo提示之后的真正错误
-                $lines = explode("\n", $output);
-                foreach ($lines as $line) {
-                    $cleanLine = trim($line);
-                    if (stripos($cleanLine, $pattern) !== false && 
-                        !preg_match('/^\[sudo\] password for .+:/', $cleanLine)) {
-                        return true;
-                    }
-                }
+        return $this->containsErrorPattern($output);
+    }
+
+    private function isSudoPasswordPrompt(string $output): bool
+    {
+        return 1 === preg_match('/^\[sudo\] password for .+:/', trim($output));
+    }
+
+    private function containsErrorPattern(string $output): bool
+    {
+        foreach (self::ERROR_PATTERNS as $pattern) {
+            if ($this->hasPatternInOutput($output, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasPatternInOutput(string $output, string $pattern): bool
+    {
+        if (false === stripos($output, $pattern)) {
+            return false;
+        }
+
+        $lines = explode("\n", $output);
+        foreach ($lines as $line) {
+            $cleanLine = trim($line);
+            if (false !== stripos($cleanLine, $pattern) && !$this->isSudoPasswordPrompt($cleanLine)) {
+                return true;
             }
         }
 

@@ -2,17 +2,60 @@
 
 namespace ServerCommandBundle\Tests\Service;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ServerNodeBundle\Entity\Node;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
 /**
  * 测试RemoteCommandService的SSH密钥认证功能
+ *
+ * @internal
  */
-class RemoteCommandServiceKeyAuthTest extends TestCase
+#[CoversClass(Node::class)]
+final class RemoteCommandServiceKeyAuthTest extends AbstractEntityTestCase
 {
-    public function testNodeWithPrivateKey(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // 该测试类专门测试 Node 实体的 SSH 密钥认证功能
+        // 在集成测试中直接实例化 Entity 是合理的行为
+        // 因为需要验证 SSH 私钥、密码等认证配置的正确性
+        // 这种测试更接近单元测试，但需要数据库环境支持
+    }
+
+    protected function createEntity(): Node
     {
         $node = new Node();
+        $node->setName('测试节点');
+        $node->setSshHost('test.example.com');
+        $node->setSshPort(22);
+        $node->setSshUser('testuser');
+        $node->setSshPassword('testpass');
+        $node->setValid(true);
+
+        return $node;
+    }
+
+    /**
+     * 提供 Node 实体属性及其样本值的 Data Provider.
+     *
+     * @return iterable<string, array{0: string, 1: mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'name' => ['name', '测试节点名称'];
+        yield 'sshHost' => ['sshHost', '192.168.1.100'];
+        yield 'sshPort' => ['sshPort', 22];
+        yield 'sshUser' => ['sshUser', 'root'];
+        yield 'sshPassword' => ['sshPassword', 'password123'];
+        yield 'sshPrivateKey' => ['sshPrivateKey', '-----BEGIN PRIVATE KEY-----' . "\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\n-----END PRIVATE KEY-----"];
+        yield 'valid' => ['valid', true];
+    }
+
+    public function testNodeWithPrivateKey(): void
+    {
+        $node = $this->createEntity();
         $node->setSshHost('192.168.1.100');
         $node->setSshPort(22);
         $node->setSshUser('root');
@@ -30,7 +73,7 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
 
     public function testNodeWithPasswordFallback(): void
     {
-        $node = new Node();
+        $node = $this->createEntity();
         $node->setSshHost('192.168.1.101');
         $node->setSshPort(22);
         $node->setSshUser('admin');
@@ -48,7 +91,7 @@ INVALID_KEY_CONTENT
 
     public function testNodeWithOnlyPassword(): void
     {
-        $node = new Node();
+        $node = $this->createEntity();
         $node->setSshHost('192.168.1.102');
         $node->setSshPort(2022);
         $node->setSshUser('user');
@@ -65,7 +108,7 @@ INVALID_KEY_CONTENT
 
     public function testNodeWithNoAuthMethod(): void
     {
-        $node = new Node();
+        $node = $this->createEntity();
         $node->setSshHost('192.168.1.103');
         $node->setSshPort(22);
         $node->setSshUser('noauth');
@@ -95,7 +138,7 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
         ];
 
         foreach ($validKeys as $index => $privateKey) {
-            $node = new Node();
+            $node = $this->createEntity();
             $node->setSshHost("192.168.1.10{$index}");
             $node->setSshUser('testuser');
             $node->setSshPrivateKey($privateKey);
@@ -109,7 +152,7 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
 
     public function testEmptyPrivateKey(): void
     {
-        $node = new Node();
+        $node = $this->createEntity();
         $node->setSshPrivateKey('');
 
         // 验证空字符串私钥的处理
@@ -126,9 +169,9 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB
 MIIE6TAbBgkqhkiG9w0BBQMwDgQIhTYH/OLTMvkCAggABIIEyMKEOi9mKiK8HiQy
 -----END ENCRYPTED PRIVATE KEY-----';
 
-        $node = new Node();
+        $node = $this->createEntity();
         $node->setSshPrivateKey($encryptedKey);
 
         $this->assertEquals($encryptedKey, $node->getSshPrivateKey());
     }
-} 
+}

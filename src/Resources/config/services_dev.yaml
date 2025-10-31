@@ -1,0 +1,10 @@
+services:
+  # Development environment services
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  # DataFixtures services for development environment
+  ServerCommandBundle\DataFixtures\:
+    resource: '../../DataFixtures/'

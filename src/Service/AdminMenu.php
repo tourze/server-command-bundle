@@ -8,10 +8,10 @@ use ServerCommandBundle\Entity\RemoteFileTransfer;
 use Tourze\EasyAdminMenuBundle\Service\LinkGeneratorInterface;
 use Tourze\EasyAdminMenuBundle\Service\MenuProviderInterface;
 
-class AdminMenu implements MenuProviderInterface
+readonly class AdminMenu implements MenuProviderInterface
 {
     public function __construct(
-        private readonly LinkGeneratorInterface $linkGenerator,
+        private LinkGeneratorInterface $linkGenerator,
     ) {
     }
 
@@ -22,15 +22,22 @@ class AdminMenu implements MenuProviderInterface
         }
 
         $serverMenu = $item->getChild('服务器管理');
+        if (null === $serverMenu) {
+            return;
+        }
 
         // 现有的远程命令菜单
-        $serverMenu->addChild('远程命令')
+        $serverMenu
+            ->addChild('远程命令')
             ->setUri($this->linkGenerator->getCurdListPage(RemoteCommand::class))
-            ->setAttribute('icon', 'fas fa-cogs');
+            ->setAttribute('icon', 'fas fa-cogs')
+        ;
 
         // 新增的文件传输菜单
-        $serverMenu->addChild('文件传输')
+        $serverMenu
+            ->addChild('文件传输')
             ->setUri($this->linkGenerator->getCurdListPage(RemoteFileTransfer::class))
-            ->setAttribute('icon', 'fas fa-upload');
+            ->setAttribute('icon', 'fas fa-upload')
+        ;
     }
 }

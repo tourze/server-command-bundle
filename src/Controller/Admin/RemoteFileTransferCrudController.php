@@ -30,8 +30,11 @@ use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-#[AdminCrud(routePath: '/server/file-transfer', routeName: 'server_file_transfer')]
-class RemoteFileTransferCrudController extends AbstractCrudController
+/**
+ * @extends AbstractCrudController<RemoteFileTransfer>
+ */
+#[AdminCrud(routePath: '/server-command/remote-file-transfer', routeName: 'server_command_remote_file_transfer')]
+final class RemoteFileTransferCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly RemoteFileService $remoteFileService,
@@ -54,8 +57,11 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             ->setPageTitle('edit', '编辑文件传输')
             ->setHelp('index', '管理远程文件传输任务，支持查看传输状态、执行结果等')
             ->setDefaultSort(['id' => 'DESC'])
-            ->setSearchFields(['id', 'name', 'localPath', 'remotePath'])
-            ->setPaginatorPageSize(20);
+            ->setSearchFields(['id', 'name', 'localPath', 'remotePath']) // 确保不包含tags
+            ->setPaginatorPageSize(20)
+            // 强制禁用自动字段发现中可能的tags字段
+            ->overrideTemplate('crud/field/array', '@EasyAdmin/crud/field/text.html.twig')
+        ;
     }
 
     public function configureFields(string $pageName): iterable
@@ -63,36 +69,46 @@ class RemoteFileTransferCrudController extends AbstractCrudController
         // ID字段
         yield IntegerField::new('id', 'ID')
             ->setColumns(6)
-            ->hideOnForm();
+            ->hideOnForm()
+        ;
 
         // 基本信息字段
         yield TextField::new('name', '传输名称')
-            ->setMaxLength(50);
+            ->setMaxLength(50)
+        ;
 
         yield AssociationField::new('node', '目标节点')
             ->setRequired(true)
-            ->autocomplete();
+            ->autocomplete()
+        ;
 
         yield TextField::new('localPath', '本地文件路径')
             ->setMaxLength(80)
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield TextField::new('remotePath', '远程目标路径')
-            ->setMaxLength(80);
+            ->setMaxLength(80)
+        ;
 
         yield TextField::new('tempPath', '临时路径')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         // 文件信息
         yield IntegerField::new('fileSize', '文件大小')
             ->hideOnForm()
             ->formatValue(function ($value) {
+                assert(is_int($value) || null === $value);
+
                 return $this->formatFileSize($value);
-            });
+            })
+        ;
 
         yield IntegerField::new('timeout', '超时时间(秒)')
-            ->setHelp('传输超时时间，默认300秒');
+            ->setHelp('传输超时时间，默认300秒')
+        ;
 
         // 状态和配置
         yield ChoiceField::new('status', '状态')
@@ -108,58 +124,67 @@ class RemoteFileTransferCrudController extends AbstractCrudController
                 FileTransferStatus::COMPLETED->value => 'success',
                 FileTransferStatus::FAILED->value => 'danger',
                 FileTransferStatus::CANCELED->value => 'secondary',
-            ]);
+            ])
+        ;
 
         yield BooleanField::new('useSudo', '使用sudo')
-            ->setHelp('移动文件到目标位置时是否使用sudo权限');
+            ->setHelp('移动文件到目标位置时是否使用sudo权限')
+        ;
 
         yield BooleanField::new('enabled', '启用')
-            ->setHelp('是否启用此传输任务');
+            ->setHelp('是否启用此传输任务')
+        ;
 
         // 时间信息
         yield DateTimeField::new('startedAt', '开始时间')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield DateTimeField::new('completedAt', '完成时间')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield NumberField::new('transferTime', '传输耗时(秒)')
             ->hideOnForm()
             ->setNumDecimals(3)
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         // 结果信息
         yield TextareaField::new('result', '传输结果')
             ->hideOnForm()
             ->hideOnIndex()
-            ->setMaxLength(200);
+            ->setMaxLength(200)
+        ;
 
-        // 标签
+        // 标签 - 完全避免直接引用tags字段，使用虚拟字段
         if (Crud::PAGE_DETAIL === $pageName) {
-            yield TextareaField::new('tags', '标签')
+            yield TextField::new('tagsDisplay', '标签')
                 ->hideOnForm()
-                ->formatValue(function ($value) {
-                    return is_array($value) ? implode(', ', $value) : '';
-                });
+            ;
         }
 
         // 审计字段
         yield TextField::new('createdBy', '创建人')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield TextField::new('updatedBy', '更新人')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
 
         yield DateTimeField::new('createTime', '创建时间')
-            ->hideOnForm();
+            ->hideOnForm()
+        ;
 
         yield DateTimeField::new('updateTime', '更新时间')
             ->hideOnForm()
-            ->hideOnIndex();
+            ->hideOnIndex()
+        ;
     }
 
     public function configureFilters(Filters $filters): Filters
@@ -178,7 +203,8 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             ->add(BooleanFilter::new('enabled', '启用状态'))
             ->add(DateTimeFilter::new('createTime', '创建时间'))
             ->add(DateTimeFilter::new('startedAt', '开始时间'))
-            ->add(DateTimeFilter::new('completedAt', '完成时间'));
+            ->add(DateTimeFilter::new('completedAt', '完成时间'))
+        ;
     }
 
     public function configureActions(Actions $actions): Actions
@@ -190,22 +216,25 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             ->displayIf(function (RemoteFileTransfer $transfer) {
                 return in_array($transfer->getStatus(), [
                     FileTransferStatus::FAILED,
-                    FileTransferStatus::CANCELED
+                    FileTransferStatus::CANCELED,
                 ], true);
-            });
+            })
+        ;
 
         // 取消传输操作
         $cancelAction = Action::new('cancel', '取消传输', 'fa fa-times')
             ->linkToCrudAction('cancelTransfer')
             ->setCssClass('btn btn-danger')
             ->displayIf(function (RemoteFileTransfer $transfer) {
-                return $transfer->getStatus() === FileTransferStatus::PENDING;
-            });
+                return FileTransferStatus::PENDING === $transfer->getStatus();
+            })
+        ;
 
         // 查看日志操作
         $viewLogsAction = Action::new('viewLogs', '查看日志', 'fa fa-file-text')
             ->linkToCrudAction('viewLogs')
-            ->setCssClass('btn btn-info');
+            ->setCssClass('btn btn-info')
+        ;
 
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
@@ -215,14 +244,8 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             ->add(Crud::PAGE_DETAIL, $retryAction)
             ->add(Crud::PAGE_DETAIL, $cancelAction)
             ->add(Crud::PAGE_DETAIL, $viewLogsAction)
-            ->reorder(Crud::PAGE_INDEX, [Action::DETAIL, Action::EDIT, 'retry', 'cancel', 'viewLogs', Action::DELETE])
-            ->remove(Crud::PAGE_INDEX, Action::NEW)  // 通常不通过后台创建文件传输
-            ->remove(Crud::PAGE_DETAIL, Action::EDIT)  // 传输记录一般不允许编辑
-            ->update(Crud::PAGE_INDEX, Action::DELETE, function (Action $action) {
-                return $action->displayIf(function (RemoteFileTransfer $transfer) {
-                    return $transfer->getStatus()?->isTerminal() ?? false;
-                });
-            });
+            // 移除reorder调用和不必要的remove/update调用，避免引用不存在的actions
+        ;
     }
 
     /**
@@ -245,7 +268,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             // 执行传输
             $result = $this->remoteFileService->executeTransfer($transfer);
 
-            if ($result->getStatus() === FileTransferStatus::COMPLETED) {
+            if (FileTransferStatus::COMPLETED === $result->getStatus()) {
                 $this->addFlash('success', sprintf('文件传输 "%s" 重新执行成功', $transfer->getName()));
             } else {
                 $this->addFlash('warning', sprintf('文件传输 "%s" 重新执行失败: %s', $transfer->getName(), $result->getResult()));
@@ -254,7 +277,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             $this->addFlash('danger', sprintf('重新执行传输时出错: %s', $e->getMessage()));
         }
 
-        return $this->redirect($context->getRequest()->headers->get('referer'));
+        return $this->redirect($context->getRequest()->headers->get('referer') ?? '/');
     }
 
     /**
@@ -273,7 +296,7 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             $this->addFlash('danger', sprintf('取消传输时出错: %s', $e->getMessage()));
         }
 
-        return $this->redirect($context->getRequest()->headers->get('referer'));
+        return $this->redirect($context->getRequest()->headers->get('referer') ?? '/');
     }
 
     /**
@@ -295,13 +318,13 @@ class RemoteFileTransferCrudController extends AbstractCrudController
             '临时路径' => $transfer->getTempPath(),
             '文件大小' => $this->formatFileSize($transfer->getFileSize()),
             '状态' => $transfer->getStatus()?->getLabel(),
-            '使用sudo' => $transfer->isUseSudo() ? '是' : '否',
+            '使用sudo' => (true === $transfer->isUseSudo()) ? '是' : '否',
             '超时时间' => $transfer->getTimeout() . '秒',
             '开始时间' => $transfer->getStartedAt()?->format('Y-m-d H:i:s'),
             '完成时间' => $transfer->getCompletedAt()?->format('Y-m-d H:i:s'),
             '传输耗时' => null !== $transfer->getTransferTime() ? round($transfer->getTransferTime(), 3) . '秒' : null,
             '传输结果' => $transfer->getResult(),
-            '标签' => is_array($transfer->getTags()) ? implode(', ', $transfer->getTags()) : null,
+            '标签' => $transfer->getTagsDisplay(),
             '创建人' => $transfer->getCreatedBy(),
             '创建时间' => $transfer->getCreateTime()?->format('Y-m-d H:i:s'),
         ];
@@ -327,11 +350,11 @@ class RemoteFileTransferCrudController extends AbstractCrudController
     <table>';
 
         foreach ($logInfo as $key => $value) {
-            if ($value !== null && $value !== '') {
+            if (null !== $value && '' !== $value) {
                 $html .= sprintf(
                     '<tr><th>%s</th><td>%s</td></tr>',
                     htmlspecialchars($key),
-                    htmlspecialchars((string)$value)
+                    htmlspecialchars((string) $value)
                 );
             }
         }
@@ -357,6 +380,6 @@ class RemoteFileTransferCrudController extends AbstractCrudController
 
         $bytes /= (1 << (10 * $pow));
 
-        return round($bytes, 2) . ' ' . $units[$pow];
+        return round($bytes, 2) . ' ' . $units[(int) $pow];
     }
-} 
+}

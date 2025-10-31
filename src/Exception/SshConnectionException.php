@@ -2,9 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use RuntimeException;
-
-class SshConnectionException extends RuntimeException
+class SshConnectionException extends \RuntimeException
 {
     public static function connectionFailed(string $host, int $port): self
     {

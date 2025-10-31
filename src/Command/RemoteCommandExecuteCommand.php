@@ -5,6 +5,7 @@ namespace ServerCommandBundle\Command;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Service\RemoteCommandService;
+use ServerNodeBundle\Entity\Node;
 use ServerNodeBundle\Repository\NodeRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,6 +22,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class RemoteCommandExecuteCommand extends Command
 {
     public const NAME = 'server-node:remote-command:execute';
+
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
         private readonly NodeRepository $nodeRepository,
@@ -38,7 +40,8 @@ class RemoteCommandExecuteCommand extends Command
             ->addOption('working-dir', null, InputOption::VALUE_OPTIONAL, '工作目录')
             ->addOption('sudo', null, InputOption::VALUE_NONE, '是否使用sudo执行')
             ->addOption('timeout', null, InputOption::VALUE_OPTIONAL, '超时时间(秒)', 300)
-            ->addOption('execute-all-pending', null, InputOption::VALUE_NONE, '执行所有待执行的命令');
+            ->addOption('execute-all-pending', null, InputOption::VALUE_NONE, '执行所有待执行的命令')
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -53,6 +56,8 @@ class RemoteCommandExecuteCommand extends Command
         // 执行指定ID的命令
         $commandId = $input->getArgument('command-id');
         if (null !== $commandId && '' !== $commandId) {
+            assert(is_string($commandId));
+
             return $this->executeCommandById($commandId, $io);
         }
 
@@ -61,8 +66,13 @@ class RemoteCommandExecuteCommand extends Command
         $name = $input->getOption('name');
         $command = $input->getOption('command');
 
-        if (null === $nodeId || '' === $nodeId || null === $name || '' === $name || null === $command || '' === $command) {
+        if (
+            null === $nodeId || '' === $nodeId
+            || null === $name || '' === $name
+            || null === $command || '' === $command
+        ) {
             $io->error('必须指定节点ID、命令名称和命令内容，或者提供已存在的命令ID');
+
             return Command::INVALID;
         }
 
@@ -74,6 +84,7 @@ class RemoteCommandExecuteCommand extends Command
         $command = $this->remoteCommandService->findById($commandId);
         if (null === $command) {
             $io->error(sprintf('未找到ID为 %s 的命令', $commandId));
+
             return Command::FAILURE;
         }
 
@@ -83,7 +94,7 @@ class RemoteCommandExecuteCommand extends Command
 
         $this->outputCommandResult($command, $io);
 
-        return $command->getStatus() === CommandStatus::COMPLETED
+        return CommandStatus::COMPLETED === $command->getStatus()
             ? Command::SUCCESS
             : Command::FAILURE;
     }
@@ -91,10 +102,12 @@ class RemoteCommandExecuteCommand extends Command
     private function createAndExecuteCommand(InputInterface $input, SymfonyStyle $io): int
     {
         $nodeId = $input->getOption('node-id');
+        assert(is_string($nodeId) || is_int($nodeId));
         $node = $this->nodeRepository->find($nodeId);
 
         if (null === $node) {
-            $io->error(sprintf('未找到ID为 %s 的节点', $nodeId));
+            $io->error(sprintf('未找到ID为 %s 的节点', (string) $nodeId));
+
             return Command::FAILURE;
         }
 
@@ -102,7 +115,13 @@ class RemoteCommandExecuteCommand extends Command
         $commandStr = $input->getOption('command');
         $workingDir = $input->getOption('working-dir');
         $sudo = $input->getOption('sudo');
-        $timeout = (int)$input->getOption('timeout');
+        $timeout = $input->getOption('timeout');
+
+        assert(is_string($name));
+        assert(is_string($commandStr));
+        assert(is_string($workingDir) || null === $workingDir);
+        assert(is_bool($sudo) || null === $sudo);
+        assert(is_string($timeout) || is_int($timeout) || null === $timeout);
 
         $io->section(sprintf('在节点 %s 上创建并执行命令: %s', $node->getName(), $name));
 
@@ -112,14 +131,14 @@ class RemoteCommandExecuteCommand extends Command
             $commandStr,
             $workingDir,
             $sudo,
-            $timeout
+            (int) $timeout
         );
 
         $this->remoteCommandService->executeCommand($command);
 
         $this->outputCommandResult($command, $io);
 
-        return $command->getStatus() === CommandStatus::COMPLETED
+        return CommandStatus::COMPLETED === $command->getStatus()
             ? Command::SUCCESS
             : Command::FAILURE;
     }
@@ -128,8 +147,9 @@ class RemoteCommandExecuteCommand extends Command
     {
         $commands = $this->remoteCommandService->findAllPendingCommands();
 
-        if (empty($commands)) {
+        if (0 === count($commands)) {
             $io->success('没有待执行的命令');
+
             return Command::SUCCESS;
         }
 
@@ -143,10 +163,10 @@ class RemoteCommandExecuteCommand extends Command
 
             $this->remoteCommandService->executeCommand($command);
 
-            if ($command->getStatus() === CommandStatus::COMPLETED) {
-                $success++;
+            if (CommandStatus::COMPLETED === $command->getStatus()) {
+                ++$success;
             } else {
-                $failed++;
+                ++$failed;
             }
 
             $this->outputCommandResult($command, $io);
@@ -166,6 +186,7 @@ class RemoteCommandExecuteCommand extends Command
             CommandStatus::FAILED => '<error>失败</error>',
             CommandStatus::TIMEOUT => '<error>超时</error>',
             CommandStatus::CANCELED => '<comment>已取消</comment>',
+            null => '<comment>未知状态</comment>',
             default => $status->value,
         };
 

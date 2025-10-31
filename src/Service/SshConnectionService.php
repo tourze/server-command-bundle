@@ -1,13 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ServerCommandBundle\Service;
 
+use Monolog\Attribute\WithMonologChannel;
 use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SSH2;
 use Psr\Log\LoggerInterface;
 use ServerCommandBundle\Exception\SshConnectionException;
 use ServerNodeBundle\Entity\Node;
 
+#[WithMonologChannel(channel: 'server_command')]
 class SshConnectionService
 {
     /**
@@ -50,51 +54,166 @@ class SshConnectionService
      */
     private function initializeConnection(Node $node): SSH2
     {
-        $host = $node->getSshHost();
-        $port = $node->getSshPort();
-        $user = $node->getSshUser();
-        $privateKey = $node->getSshPrivateKey();
-        $password = $node->getSshPassword();
+        $connectionInfo = $this->extractConnectionInfo($node);
+        $this->validateConnectionInfo($connectionInfo);
 
-        // 优先尝试私钥认证
-        if (null !== $privateKey && '' !== $privateKey) {
-            try {
-                return $this->connectWithPrivateKey($host, $port, $user, $privateKey);
-            } catch (\Throwable $e) {
-                $this->logger->warning('SSH私钥认证失败，尝试密码认证', [
-                    'host' => $host,
-                    'port' => $port,
-                    'user' => $user,
-                    'error' => $e->getMessage(),
-                ]);
+        // 尝试私钥认证
+        if ($this->hasPrivateKey($connectionInfo)) {
+            $ssh = $this->tryPrivateKeyAuth($connectionInfo);
+            if (null !== $ssh) {
+                return $ssh;
             }
         }
 
-        // 如果私钥认证失败或没有私钥，尝试密码认证
-        if (null !== $password && '' !== $password) {
-            try {
-                return $this->connectWithPassword($host, $port, $user, $password);
-            } catch (\Throwable $e) {
-                // 密码认证也失败了，记录错误并抛出异常
-                $this->logger->error('SSH密码认证也失败', [
-                    'host' => $host,
-                    'port' => $port,
-                    'user' => $user,
-                    'error' => $e->getMessage(),
-                ]);
+        // 尝试密码认证
+        if ($this->hasPassword($connectionInfo)) {
+            $ssh = $this->tryPasswordAuth($connectionInfo);
+            if (null !== $ssh) {
+                return $ssh;
             }
         }
 
-        // 如果所有认证方式都失败
+        // 所有认证方式都失败
+        $this->handleAllAuthenticationsFailed($connectionInfo);
+
+        $host = $connectionInfo['host'] ?? 'unknown';
+        throw SshConnectionException::connectionFailed($host, $connectionInfo['port']);
+    }
+
+    /**
+     * 提取连接信息
+     *
+     * @return array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null}
+     */
+    private function extractConnectionInfo(Node $node): array
+    {
+        return [
+            'host' => $node->getSshHost(),
+            'port' => $node->getSshPort(),
+            'user' => $node->getSshUser(),
+            'privateKey' => $node->getSshPrivateKey(),
+            'password' => $node->getSshPassword(),
+        ];
+    }
+
+    /**
+     * 验证连接信息
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function validateConnectionInfo(array $connectionInfo): void
+    {
+        if (null === $connectionInfo['host'] || null === $connectionInfo['user']) {
+            $host = $connectionInfo['host'] ?? 'unknown';
+            throw SshConnectionException::connectionFailed($host, $connectionInfo['port']);
+        }
+    }
+
+    /**
+     * 是否有私钥
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function hasPrivateKey(array $connectionInfo): bool
+    {
+        return null !== $connectionInfo['privateKey'] && '' !== $connectionInfo['privateKey'];
+    }
+
+    /**
+     * 是否有密码
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function hasPassword(array $connectionInfo): bool
+    {
+        return null !== $connectionInfo['password'] && '' !== $connectionInfo['password'];
+    }
+
+    /**
+     * 尝试私钥认证
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function tryPrivateKeyAuth(array $connectionInfo): ?SSH2
+    {
+        try {
+            $host = $connectionInfo['host'];
+            $user = $connectionInfo['user'];
+            $privateKey = $connectionInfo['privateKey'];
+
+            if (null === $host || null === $user || null === $privateKey) {
+                return null;
+            }
+
+            return $this->connectWithPrivateKey(
+                $host,
+                $connectionInfo['port'],
+                $user,
+                $privateKey
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('SSH私钥认证失败，尝试密码认证', [
+                'host' => $connectionInfo['host'],
+                'port' => $connectionInfo['port'],
+                'user' => $connectionInfo['user'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 尝试密码认证
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function tryPasswordAuth(array $connectionInfo): ?SSH2
+    {
+        try {
+            $host = $connectionInfo['host'];
+            $user = $connectionInfo['user'];
+            $password = $connectionInfo['password'];
+
+            if (null === $host || null === $user || null === $password) {
+                return null;
+            }
+
+            return $this->connectWithPassword(
+                $host,
+                $connectionInfo['port'],
+                $user,
+                $password
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('SSH密码认证也失败', [
+                'host' => $connectionInfo['host'],
+                'port' => $connectionInfo['port'],
+                'user' => $connectionInfo['user'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * 处理所有认证失败的情况
+     *
+     * @param array{host: string|null, port: int, user: string|null, privateKey: string|null, password: string|null} $connectionInfo
+     */
+    private function handleAllAuthenticationsFailed(array $connectionInfo): void
+    {
         $error = 'SSH连接失败: 私钥和密码认证均失败';
         $this->logger->error($error, [
-            'host' => $host,
-            'port' => $port,
-            'user' => $user,
-            'hasPrivateKey' => !empty($privateKey),
-            'hasPassword' => !empty($password),
+            'host' => $connectionInfo['host'],
+            'port' => $connectionInfo['port'],
+            'user' => $connectionInfo['user'],
+            'hasPrivateKey' => null !== $connectionInfo['privateKey'] && '' !== $connectionInfo['privateKey'],
+            'hasPassword' => null !== $connectionInfo['password'] && '' !== $connectionInfo['password'],
         ]);
-        throw SshConnectionException::connectionFailed($host, $port);
+        $host = $connectionInfo['host'] ?? 'unknown';
+        throw SshConnectionException::connectionFailed($host, $connectionInfo['port']);
     }
 
     /**
@@ -105,7 +224,7 @@ class SshConnectionService
         $ssh = $this->createBasicConnection($host, $port);
 
         try {
-            $key = PublicKeyLoader::load($privateKey);
+            $key = PublicKeyLoader::loadPrivateKey($privateKey);
             if (!$ssh->login($user, $key)) {
                 $error = 'SSH连接失败: 私钥认证失败';
                 $this->logger->error($error, [
@@ -209,14 +328,15 @@ class SshConnectionService
             while ((time() - $startTime) < self::MAX_WAIT_TIME) {
                 // 尝试读取小块数据，不使用正则匹配
                 $temp = $ssh->read();
-                if (!empty($temp)) {
+                if (null !== $temp && '' !== $temp) {
                     $output .= $temp;
                     // 检查是否已经收到密码提示或root提示
-                    if (preg_match('/[Pp]assword|密码|口令|认证/i', $output)) {
+                    if (1 === preg_match('/[Pp]assword|密码|口令|认证/i', $output)) {
                         $ssh->write("{$node->getSshPassword()}\n"); // 输入sudo密码
                         $this->waitForRootPrompt($ssh);
                         break;
-                    } else if (preg_match('/root@|#\s*$/', $output)) {
+                    }
+                    if (1 === preg_match('/root@|#\s*$/', $output)) {
                         // 已经是root用户或直接切换成功
                         break;
                     }
@@ -247,9 +367,9 @@ class SshConnectionService
 
         while ((time() - $startRootTime) < self::MAX_WAIT_TIME && !$foundRoot) {
             $temp = $ssh->read();
-            if (!empty($temp)) {
+            if (null !== $temp && '' !== $temp) {
                 $rootOutput .= $temp;
-                if (preg_match('/root@|#\s*$/', $rootOutput)) {
+                if (1 === preg_match('/root@|#\s*$/', $rootOutput)) {
                     $foundRoot = true;
                 }
             }

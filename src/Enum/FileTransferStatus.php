@@ -16,48 +16,33 @@ enum FileTransferStatus: string implements Labelable, Itemable, Selectable
     use ItemTrait;
     use SelectTrait;
 
-    case PENDING = 'pending';          // 等待传输
-    case UPLOADING = 'uploading';      // 正在上传
-    case MOVING = 'moving';            // 正在移动
-    case COMPLETED = 'completed';      // 传输完成
-    case FAILED = 'failed';            // 传输失败
-    case CANCELED = 'canceled';        // 已取消
+    case PENDING = 'pending';
+    case UPLOADING = 'uploading';
+    case MOVING = 'moving';
+    case COMPLETED = 'completed';
+    case FAILED = 'failed';
+    case CANCELED = 'canceled';
 
-    /**
-     * 获取状态标签
-     */
     public function getLabel(): string
     {
         return match ($this) {
-            self::PENDING => '等待传输',
-            self::UPLOADING => '正在上传',
-            self::MOVING => '正在移动',
-            self::COMPLETED => '传输完成',
-            self::FAILED => '传输失败',
-            self::CANCELED => '已取消',
+            self::PENDING => '待处理',
+            self::UPLOADING => 'UPLOADING',
+            self::MOVING => 'MOVING',
+            self::COMPLETED => '已完成',
+            self::FAILED => '失败',
+            self::CANCELED => 'CANCELED',
         };
     }
 
     /**
-     * 获取状态颜色
-     */
-    public function getColor(): string
-    {
-        return match ($this) {
-            self::PENDING => 'warning',
-            self::UPLOADING => 'info',
-            self::MOVING => 'info',
-            self::COMPLETED => 'success',
-            self::FAILED => 'danger',
-            self::CANCELED => 'secondary',
-        };
-    }
-
-    /**
-     * 检查是否是终态
+     * 检查是否为终止状态
      */
     public function isTerminal(): bool
     {
-        return in_array($this, [self::COMPLETED, self::FAILED, self::CANCELED], true);
+        return match ($this) {
+            self::COMPLETED, self::FAILED, self::CANCELED => true,
+            self::PENDING, self::UPLOADING, self::MOVING => false,
+        };
     }
 }

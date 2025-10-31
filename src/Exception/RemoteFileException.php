@@ -2,10 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use InvalidArgumentException;
-use RuntimeException;
-
-class RemoteFileException extends RuntimeException
+class RemoteFileException extends \RuntimeException
 {
     public static function invalidLocalPath(): self
     {

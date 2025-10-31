@@ -4,17 +4,18 @@ namespace ServerCommandBundle\DataFixtures;
 
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
-use ServerNodeBundle\DataFixtures\NodeFixtures;
 use ServerNodeBundle\Entity\Node;
+use Symfony\Component\DependencyInjection\Attribute\When;
 
 /**
  * 远程命令数据填充
  */
-class RemoteCommandFixtures extends Fixture implements DependentFixtureInterface, FixtureGroupInterface
+#[When(env: 'test')]
+#[When(env: 'dev')]
+class RemoteCommandFixtures extends Fixture implements FixtureGroupInterface
 {
     // 使用常量定义引用名称
     public const SYSTEM_UPDATE_COMMAND = 'system-update-command';
@@ -24,84 +25,93 @@ class RemoteCommandFixtures extends Fixture implements DependentFixtureInterface
 
     public function load(ObjectManager $manager): void
     {
-        // 使用来自 NodeFixtures 的引用
-        /** @var Node $linuxNode */
-        $linuxNode = $this->getReference(NodeFixtures::REFERENCE_NODE_1, Node::class);
-        
+        // 创建测试节点
+        $linuxNode = new Node();
+        $linuxNode->setName('测试服务器');
+        $linuxNode->setSshHost('127.0.0.1');
+        $linuxNode->setSshUser('root');
+        $linuxNode->setSshPort(22);
+        $linuxNode->setValid(true);
+        $manager->persist($linuxNode);
+
         // 创建系统更新命令
         $updateCommand = new RemoteCommand();
-        $updateCommand->setNode($linuxNode)
-            ->setName('系统更新')
-            ->setCommand('apt update && apt upgrade -y')
-            ->setWorkingDirectory('/root')
-            ->setUseSudo(true)
-            ->setEnabled(true)
-            ->setStatus(CommandStatus::PENDING)
-            ->setTimeout(600)
-            ->setTags(['system', 'maintenance']);
-        
+        $updateCommand->setNode($linuxNode);
+        $updateCommand->setName('系统更新');
+        $updateCommand->setCommand('apt update && apt upgrade -y');
+        $updateCommand->setWorkingDirectory('/root');
+        $updateCommand->setUseSudo(true);
+        $updateCommand->setEnabled(true);
+        $updateCommand->setStatus(CommandStatus::PENDING);
+        $updateCommand->setTimeout(600);
+        $updateCommand->setTags(['system', 'maintenance']);
+
         $manager->persist($updateCommand);
         $this->addReference(self::SYSTEM_UPDATE_COMMAND, $updateCommand);
-        
+
         // 创建系统重启命令
         $restartCommand = new RemoteCommand();
-        $restartCommand->setNode($linuxNode)
-            ->setName('系统重启')
-            ->setCommand('reboot')
-            ->setWorkingDirectory('/root')
-            ->setUseSudo(true)
-            ->setEnabled(true)
-            ->setStatus(CommandStatus::PENDING)
-            ->setTimeout(60)
-            ->setTags(['system', 'critical']);
-        
+        $restartCommand->setNode($linuxNode);
+        $restartCommand->setName('系统重启');
+        $restartCommand->setCommand('reboot');
+        $restartCommand->setWorkingDirectory('/root');
+        $restartCommand->setUseSudo(true);
+        $restartCommand->setEnabled(true);
+        $restartCommand->setStatus(CommandStatus::PENDING);
+        $restartCommand->setTimeout(60);
+        $restartCommand->setTags(['system', 'critical']);
+
         $manager->persist($restartCommand);
         $this->addReference(self::SYSTEM_RESTART_COMMAND, $restartCommand);
-        
+
         // 创建Nginx重启命令
         $nginxCommand = new RemoteCommand();
-        $nginxCommand->setNode($linuxNode)
-            ->setName('重启Nginx')
-            ->setCommand('systemctl restart nginx')
-            ->setWorkingDirectory('/root')
-            ->setUseSudo(true)
-            ->setEnabled(true)
-            ->setStatus(CommandStatus::COMPLETED)
-            ->setResult("● nginx.service - A high performance web server and a reverse proxy server\n   Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)\n   Active: active (running) since Wed 2023-08-16 14:22:33 UTC; 2s ago")
-            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 14:22:30'))
-            ->setExecutionTime(2.53)
-            ->setTimeout(120)
-            ->setTags(['service', 'web']);
+        $nginxCommand->setNode($linuxNode);
+        $nginxCommand->setName('重启Nginx');
+        $nginxCommand->setCommand('systemctl restart nginx');
+        $nginxCommand->setWorkingDirectory('/root');
+        $nginxCommand->setUseSudo(true);
+        $nginxCommand->setEnabled(true);
+        $nginxCommand->setStatus(CommandStatus::COMPLETED);
+        $nginxCommand->setResult(
+            "● nginx.service - A high performance web server and a reverse proxy server\n" .
+            "   Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)\n" .
+            '   Active: active (running) since Wed 2023-08-16 14:22:33 UTC; 2s ago'
+        );
+        $nginxCommand->setExecutedAt(new \DateTimeImmutable('2023-08-16 14:22:30'));
+        $nginxCommand->setExecutionTime(2.53);
+        $nginxCommand->setTimeout(120);
+        $nginxCommand->setTags(['service', 'web']);
 
         $manager->persist($nginxCommand);
         $this->addReference(self::NGINX_RESTART_COMMAND, $nginxCommand);
 
         // 创建磁盘空间查询命令
         $diskCommand = new RemoteCommand();
-        $diskCommand->setNode($linuxNode)
-            ->setName('查询磁盘空间')
-            ->setCommand('df -h')
-            ->setWorkingDirectory('/root')
-            ->setUseSudo(false)
-            ->setEnabled(true)
-            ->setStatus(CommandStatus::COMPLETED)
-            ->setResult("Filesystem      Size  Used Avail Use% Mounted on\nudev            7.9G     0  7.9G   0% /dev\ntmpfs           1.6G  2.3M  1.6G   1% /run\n/dev/sda1        80G   25G   51G  34% /\ntmpfs           7.9G     0  7.9G   0% /dev/shm\ntmpfs           5.0M     0  5.0M   0% /run/lock")
-            ->setExecutedAt(new \DateTimeImmutable('2023-08-16 15:10:12'))
-            ->setExecutionTime(0.32)
-            ->setTimeout(60)
-            ->setTags(['system', 'monitoring']);
+        $diskCommand->setNode($linuxNode);
+        $diskCommand->setName('查询磁盘空间');
+        $diskCommand->setCommand('df -h');
+        $diskCommand->setWorkingDirectory('/root');
+        $diskCommand->setUseSudo(false);
+        $diskCommand->setEnabled(true);
+        $diskCommand->setStatus(CommandStatus::COMPLETED);
+        $diskCommand->setResult(
+            "Filesystem      Size  Used Avail Use% Mounted on\n" .
+            "udev            7.9G     0  7.9G   0% /dev\n" .
+            "tmpfs           1.6G  2.3M  1.6G   1% /run\n" .
+            "/dev/sda1        80G   25G   51G  34% /\n" .
+            "tmpfs           7.9G     0  7.9G   0% /dev/shm\n" .
+            'tmpfs           5.0M     0  5.0M   0% /run/lock'
+        );
+        $diskCommand->setExecutedAt(new \DateTimeImmutable('2023-08-16 15:10:12'));
+        $diskCommand->setExecutionTime(0.32);
+        $diskCommand->setTimeout(60);
+        $diskCommand->setTags(['system', 'monitoring']);
 
         $manager->persist($diskCommand);
         $this->addReference(self::DISK_SPACE_COMMAND, $diskCommand);
 
         $manager->flush();
-    }
-
-    public function getDependencies(): array
-    {
-        return [
-            NodeFixtures::class,
-        ];
     }
 
     /**

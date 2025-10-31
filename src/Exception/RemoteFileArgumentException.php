@@ -2,9 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use InvalidArgumentException;
-
-class RemoteFileArgumentException extends InvalidArgumentException
+class RemoteFileArgumentException extends \InvalidArgumentException
 {
     public static function invalidArgument(string $message): self
     {

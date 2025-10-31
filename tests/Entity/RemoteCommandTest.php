@@ -2,20 +2,56 @@
 
 namespace ServerCommandBundle\Tests\Entity;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerNodeBundle\Entity\Node;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class RemoteCommandTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(RemoteCommand::class)]
+final class RemoteCommandTest extends AbstractEntityTestCase
 {
     private RemoteCommand $command;
+
     private Node $node;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->command = new RemoteCommand();
-        $this->node = $this->createMock(Node::class);
+        // 创建真实的Node实例而不是Mock，避免类型错误
+        $this->node = new Node();
+    }
+
+    protected function createEntity(): object
+    {
+        $entity = new RemoteCommand();
+        $entity->setNode($this->node);
+        $entity->setName('test-command');
+        $entity->setCommand('echo "test"');
+
+        return $entity;
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        // 只测试简单的、非必需的属性，避免复杂类型
+        yield 'workingDirectory' => ['workingDirectory', '/home/user'];
+        yield 'useSudo' => ['useSudo', true];
+        yield 'enabled' => ['enabled', false];
+        yield 'result' => ['result', 'command executed'];
+        yield 'timeout' => ['timeout', 600];
+        yield 'executionTime' => ['executionTime', 2.5];
+        yield 'tags' => ['tags', ['system', 'maintenance']];
+        yield 'createdBy' => ['createdBy', 'admin'];
+        yield 'updatedBy' => ['updatedBy', 'system'];
     }
 
     public function testGetterAndSetterForId(): void
@@ -147,4 +183,4 @@ class RemoteCommandTest extends TestCase
         $this->command->setName($name);
         $this->assertSame($name, (string) $this->command);
     }
-} 
+}

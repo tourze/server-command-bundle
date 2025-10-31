@@ -3,13 +3,14 @@
 namespace ServerCommandBundle\Controller\Admin;
 
 use ServerCommandBundle\Service\RemoteCommandService;
+use ServerNodeBundle\Entity\Node;
 use ServerNodeBundle\Repository\NodeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
-class TerminalController extends AbstractController
+final class TerminalController extends AbstractController
 {
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
@@ -21,11 +22,11 @@ class TerminalController extends AbstractController
     public function __invoke(Request $request): JsonResponse
     {
         $nodeId = $request->request->get('nodeId');
-        $command = $request->request->get('command');
-        $workingDir = $request->request->get('workingDir', '/root');
+        $command = (string) $request->request->get('command');
+        $workingDir = (string) $request->request->get('workingDir', '/root');
         $useSudo = filter_var($request->request->get('useSudo', 'false'), FILTER_VALIDATE_BOOLEAN);
 
-        if (null === $nodeId || '' === $nodeId || null === $command || '' === $command) {
+        if (null === $nodeId || '' === $nodeId || '' === $command) {
             return new JsonResponse([
                 'success' => false,
                 'error' => '节点ID和命令不能为空',
@@ -57,7 +58,7 @@ class TerminalController extends AbstractController
             return new JsonResponse([
                 'success' => true,
                 'result' => $remoteCommand->getResult() ?? '',
-                'status' => $remoteCommand->getStatus()->value,
+                'status' => $remoteCommand->getStatus()->value ?? 'unknown',
                 'executionTime' => $remoteCommand->getExecutionTime(),
                 'commandId' => $remoteCommand->getId(),
             ]);

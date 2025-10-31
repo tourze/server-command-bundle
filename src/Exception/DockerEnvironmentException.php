@@ -2,9 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use RuntimeException;
-
-class DockerEnvironmentException extends RuntimeException
+class DockerEnvironmentException extends \RuntimeException
 {
     public static function environmentCreateFailed(): self
     {

@@ -41,16 +41,18 @@ class DockerEnvironmentService
         $this->remoteCommandService->executeCommand($dockerCheckCommand);
         $result = $dockerCheckCommand->getResult() ?? '';
         $deployTask->appendLog('Docker检查结果: ' . trim($result));
-        
+
         // 如果Docker未安装，自动安装
-        if (stripos($result, 'Docker未安装') !== false || 
-            stripos($result, 'command not found') !== false ||
-            stripos($result, 'not found') !== false) {
+        if (
+            false !== stripos($result, 'Docker未安装')
+            || false !== stripos($result, 'command not found')
+            || false !== stripos($result, 'not found')
+        ) {
             $deployTask->appendLog('Docker未安装，开始自动安装...');
             $this->installDockerOnLinux($deployTask, $node);
         } else {
             $deployTask->appendLog('Docker已安装，版本: ' . trim($result));
-            
+
             // 检查Docker服务是否正常运行
             $dockerInfoCommand = $this->remoteCommandService->createCommand(
                 $node,
@@ -65,13 +67,13 @@ class DockerEnvironmentService
             $this->remoteCommandService->executeCommand($dockerInfoCommand);
             $infoResult = $dockerInfoCommand->getResult() ?? '';
             $deployTask->appendLog('Docker服务检查: ' . trim($infoResult));
-            
-            if (stripos($infoResult, 'Docker正常') !== false) {
+
+            if (false !== stripos($infoResult, 'Docker正常')) {
                 $deployTask->appendLog('Docker环境检查通过');
             } else {
                 $deployTask->appendLog('Docker已安装但服务异常，尝试启动服务...');
                 $this->startDockerService($deployTask, $node);
-                
+
                 // 重新验证
                 $this->verifyDockerAfterStart($deployTask, $node);
             }
@@ -96,7 +98,7 @@ class DockerEnvironmentService
             30,
             ['check_os']
         );
-        
+
         $this->remoteCommandService->executeCommand($systemCheckCommand);
         $osInfo = $systemCheckCommand->getResult() ?? '';
         $deployTask->appendLog('系统信息: ' . substr(trim($osInfo), 0, 200));
@@ -106,7 +108,9 @@ class DockerEnvironmentService
         $installCurlCommand = $this->remoteCommandService->createCommand(
             $node,
             '安装curl',
-            'which curl >/dev/null 2>&1 && echo "curl已存在" || (apt install -y curl 2>/dev/null || yum install -y curl 2>/dev/null || dnf install -y curl 2>/dev/null || echo "curl安装失败")',
+            'which curl >/dev/null 2>&1 && echo "curl已存在" || ' .
+            '(apt install -y curl 2>/dev/null || yum install -y curl 2>/dev/null || ' .
+            'dnf install -y curl 2>/dev/null || echo "curl安装失败")',
             null,
             true,
             120,
@@ -132,8 +136,8 @@ class DockerEnvironmentService
         $this->remoteCommandService->executeCommand($downloadDockerScript);
         $downloadResult = $downloadDockerScript->getResult() ?? '';
         $deployTask->appendLog('下载结果: ' . trim($downloadResult));
-        
-        if (stripos($downloadResult, '脚本下载失败') !== false) {
+
+        if (false !== stripos($downloadResult, '脚本下载失败')) {
             throw DockerEnvironmentException::environmentCreateFailed();
         }
 
@@ -152,8 +156,8 @@ class DockerEnvironmentService
         $this->remoteCommandService->executeCommand($installDockerCommand);
         $installResult = $installDockerCommand->getResult() ?? '';
         $deployTask->appendLog('安装结果: ' . substr(trim($installResult), -500)); // 只显示最后500字符
-        
-        if (stripos($installResult, 'Docker安装失败') !== false) {
+
+        if (false !== stripos($installResult, 'Docker安装失败')) {
             throw DockerEnvironmentException::environmentCreateFailed();
         }
 
@@ -194,8 +198,8 @@ class DockerEnvironmentService
         $this->remoteCommandService->executeCommand($verifyDockerCommand);
         $verifyResult = $verifyDockerCommand->getResult() ?? '';
         $deployTask->appendLog('Docker验证: ' . trim($verifyResult));
-        
-        if (stripos($verifyResult, 'Docker验证失败') !== false) {
+
+        if (false !== stripos($verifyResult, 'Docker验证失败')) {
             throw DockerEnvironmentException::environmentUpdateFailed();
         }
 
@@ -221,11 +225,14 @@ class DockerEnvironmentService
         );
 
         $this->remoteCommandService->executeCommand($systemctlCommand);
-        
+
         // 检查systemctl是否成功
-        if ($systemctlCommand->getStatus() === CommandStatus::COMPLETED && 
-            !$this->checkCommandError($systemctlCommand->getResult() ?? '')) {
+        if (
+            CommandStatus::COMPLETED === $systemctlCommand->getStatus()
+            && !$this->checkCommandError($systemctlCommand->getResult() ?? '')
+        ) {
             $deployTask->appendLog('Docker服务已通过systemctl启动');
+
             return;
         }
 
@@ -241,10 +248,13 @@ class DockerEnvironmentService
         );
 
         $this->remoteCommandService->executeCommand($serviceCommand);
-        
-        if ($serviceCommand->getStatus() === CommandStatus::COMPLETED && 
-            !$this->checkCommandError($serviceCommand->getResult() ?? '')) {
+
+        if (
+            CommandStatus::COMPLETED === $serviceCommand->getStatus()
+            && !$this->checkCommandError($serviceCommand->getResult() ?? '')
+        ) {
             $deployTask->appendLog('Docker服务已通过service启动');
+
             return;
         }
 
@@ -283,7 +293,7 @@ class DockerEnvironmentService
     private function verifyDockerAfterStart(ProgressModel $deployTask, Node $node): void
     {
         $deployTask->appendLog('重新验证Docker服务...');
-        
+
         $verifyCommand = $this->remoteCommandService->createCommand(
             $node,
             '验证Docker服务',
@@ -297,11 +307,11 @@ class DockerEnvironmentService
         $this->remoteCommandService->executeCommand($verifyCommand);
         $result = $verifyCommand->getResult() ?? '';
         $deployTask->appendLog('验证结果: ' . trim($result));
-        
-        if (stripos($result, '验证成功') === false) {
+
+        if (false === stripos($result, '验证成功')) {
             throw DockerEnvironmentException::environmentUpdateFailed();
         }
-        
+
         $deployTask->appendLog('Docker环境验证通过');
     }
 
@@ -312,65 +322,83 @@ class DockerEnvironmentService
     {
         $result = $command->getResult() ?? '';
         $status = $command->getStatus();
-        
+
         // 检查命令是否真正成功执行
         $hasError = $this->checkCommandError($result);
-        
-        if ($status === CommandStatus::COMPLETED && !$hasError) {
+
+        if (CommandStatus::COMPLETED === $status && !$hasError) {
             $deployTask->appendLog("{$stepName}执行成功");
             if ('' !== $result) {
-                $deployTask->appendLog("执行结果: " . trim($result));
+                $deployTask->appendLog('执行结果: ' . trim($result));
             }
         } else {
-            $errorMsg = $hasError ? 
-                "{$stepName}执行失败: " . trim($result) : 
-                "{$stepName}执行失败: 命令状态 " . $status->value;
-                
+            $errorMsg = $hasError ?
+                "{$stepName}执行失败: " . trim($result) :
+                "{$stepName}执行失败: 命令状态 " . ($status->value ?? 'unknown');
+
             $deployTask->appendLog($errorMsg);
             throw DockerEnvironmentException::directoryCreationFailed();
         }
     }
-    
+
+    private const ERROR_PATTERNS = [
+        'command not found',
+        'Permission denied',
+        'No such file or directory',
+        'cannot create directory',
+        'Operation not permitted',
+        'Access denied',
+        'bash: line',
+        'Error:',
+        'ERROR:',
+        'Failed to',
+        'failed to',
+        'Interactive authentication required',
+        'sudo: no tty present',
+        'sudo: unable to resolve host',
+        'service: command not found',
+        'systemctl: command not found',
+    ];
+
     /**
      * 检查命令输出中是否包含错误信息
      */
     private function checkCommandError(string $output): bool
     {
-        // 先检查是否只是sudo密码提示
-        if (preg_match('/^\[sudo\] password for .+:/', trim($output))) {
+        if ($this->isSudoPasswordPrompt($output)) {
             return false;
         }
 
-        $errorPatterns = [
-            'command not found',
-            'Permission denied',
-            'No such file or directory',
-            'cannot create directory',
-            'Operation not permitted',
-            'Access denied',
-            'bash: line',
-            'Error:',
-            'ERROR:',
-            'Failed to',
-            'failed to',
-            'Interactive authentication required',
-            'sudo: no tty present',
-            'sudo: unable to resolve host',
-            'service: command not found',
-            'systemctl: command not found',
-        ];
+        return $this->containsErrorPattern($output);
+    }
 
-        foreach ($errorPatterns as $pattern) {
-            if (stripos($output, $pattern) !== false) {
-                // 进一步检查是否是在sudo提示之后的真正错误
-                $lines = explode("\n", $output);
-                foreach ($lines as $line) {
-                    $cleanLine = trim($line);
-                    if (stripos($cleanLine, $pattern) !== false && 
-                        !preg_match('/^\[sudo\] password for .+:/', $cleanLine)) {
-                        return true;
-                    }
-                }
+    private function isSudoPasswordPrompt(string $output): bool
+    {
+        return 1 === preg_match('/^\[sudo\] password for .+:/', trim($output));
+    }
+
+    private function containsErrorPattern(string $output): bool
+    {
+        foreach (self::ERROR_PATTERNS as $pattern) {
+            if ($this->hasPatternInOutput($output, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasPatternInOutput(string $output, string $pattern): bool
+    {
+        if (false === stripos($output, $pattern)) {
+            return false;
+        }
+
+        $lines = explode("\n", $output);
+        foreach ($lines as $line) {
+            $cleanLine = trim($line);
+            if (false !== stripos($cleanLine, $pattern) && !$this->isSudoPasswordPrompt($cleanLine)) {
+                return true;
             }
         }
 

@@ -2,9 +2,7 @@
 
 namespace ServerCommandBundle\Exception;
 
-use RuntimeException;
-
-class DnsConfigurationException extends RuntimeException
+class DnsConfigurationException extends \RuntimeException
 {
     public static function directoryCreationFailed(): self
     {

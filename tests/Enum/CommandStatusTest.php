@@ -2,10 +2,15 @@
 
 namespace ServerCommandBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ServerCommandBundle\Enum\CommandStatus;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class CommandStatusTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CommandStatus::class)]
+final class CommandStatusTest extends AbstractEnumTestCase
 {
     public function testEnumValues(): void
     {
@@ -44,4 +49,34 @@ class CommandStatusTest extends TestCase
         $this->expectException(\ValueError::class);
         CommandStatus::from('invalid');
     }
-} 
+
+    public function testToArray(): void
+    {
+        // 测试toArray方法，这个方法由SelectTrait提供，需要通过实例调用
+        $commandStatus = CommandStatus::PENDING;
+        $array = $commandStatus->toArray();
+
+        // toArray() 方法已经声明返回数组类型，直接验证内容
+
+        // 验证数组包含value和label
+        $this->assertArrayHasKey('value', $array);
+        $this->assertArrayHasKey('label', $array);
+        $this->assertEquals('pending', $array['value']);
+        $this->assertEquals('待执行', $array['label']);
+
+        // 测试其他枚举值
+        $testCases = [
+            ['status' => CommandStatus::RUNNING, 'expected_label' => '执行中'],
+            ['status' => CommandStatus::COMPLETED, 'expected_label' => '已完成'],
+            ['status' => CommandStatus::FAILED, 'expected_label' => '失败'],
+            ['status' => CommandStatus::TIMEOUT, 'expected_label' => '超时'],
+            ['status' => CommandStatus::CANCELED, 'expected_label' => '已取消'],
+        ];
+
+        foreach ($testCases as $testCase) {
+            $array = $testCase['status']->toArray();
+            $this->assertEquals($testCase['status']->value, $array['value']);
+            $this->assertEquals($testCase['expected_label'], $array['label']);
+        }
+    }
+}

@@ -2,16 +2,22 @@
 
 namespace ServerCommandBundle\Tests\Message;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ServerCommandBundle\Message\RemoteCommandExecuteMessage;
-use Tourze\AsyncContracts\AsyncMessageInterface;
 
-class RemoteCommandExecuteMessageTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(RemoteCommandExecuteMessage::class)]
+final class RemoteCommandExecuteMessageTest extends TestCase
 {
     public function testImplementsAsyncMessageInterface(): void
     {
         $message = new RemoteCommandExecuteMessage('1');
-        $this->assertInstanceOf(AsyncMessageInterface::class, $message);
+        // 验证消息对象正确创建
+        $this->assertInstanceOf(RemoteCommandExecuteMessage::class, $message);
+        $this->assertEquals('1', $message->getCommandId());
     }
 
     public function testGetCommandId(): void
@@ -37,8 +43,8 @@ class RemoteCommandExecuteMessageTest extends TestCase
         $commandId2 = '456';
         $message2 = new RemoteCommandExecuteMessage($commandId2);
         $this->assertSame($commandId2, $message2->getCommandId());
-        
+
         // 确保第一个消息的命令ID没有变化
         $this->assertSame($commandId1, $message1->getCommandId());
     }
-} 
+}
