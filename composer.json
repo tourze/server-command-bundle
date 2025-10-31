@@ -39,10 +39,10 @@
     "tourze/doctrine-track-bundle": "0.1.*",
     "tourze/doctrine-user-bundle": "0.0.*",
     "tourze/easy-admin-menu-bundle": "0.1.*",
-    "tourze/enum-extra": "0.1.*",
+    "tourze/enum-extra": "1.*",
     "tourze/gb-t-2659": "0.0.*",
     "tourze/server-node-bundle": "0.0.*",
-    "tourze/symfony-dependency-service-loader": "0.0.*",
+    "tourze/symfony-dependency-service-loader": "1.*",
     "tourze/symfony-routing-auto-loader-bundle": "0.0.*",
     "tourze/symfony-schedule-entity-clean-bundle": "0.1.*"
   },
@@ -50,12 +50,11 @@
     "phpstan/phpstan": "^2.1",
     "phpunit/phpunit": "^11.5",
     "tourze/phpunit-base": "1.*",
-    "tourze/phpunit-doctrine-entity": "0.0.*",
-    "tourze/phpunit-enum": "0.0.*",
+    "tourze/phpunit-doctrine-entity": "1.*",
+    "tourze/phpunit-enum": "1.*",
     "tourze/phpunit-symfony-kernel-test": "0.0.*",
-    "tourze/phpunit-symfony-unit-test": "0.0.*",
-    "tourze/phpunit-symfony-web-test": "0.0.*",
-    "tourze/symfony-testing-framework": "0.0.*"
+    "tourze/phpunit-symfony-unit-test": "1.*",
+    "tourze/phpunit-symfony-web-test": "0.0.*"
   },
   "autoload": {
     "psr-4": {
