@@ -6,6 +6,7 @@ use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Exception\DockerEnvironmentException;
+use ServerCommandBundle\Service\CommandOutputInspector;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 
@@ -16,6 +17,7 @@ class DockerEnvironmentService
 {
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
+        private readonly CommandOutputInspector $commandOutputInspector,
     ) {
     }
 
@@ -229,7 +231,7 @@ class DockerEnvironmentService
         // 检查systemctl是否成功
         if (
             CommandStatus::COMPLETED === $systemctlCommand->getStatus()
-            && !$this->checkCommandError($systemctlCommand->getResult() ?? '')
+            && !$this->commandOutputInspector->hasError($systemctlCommand->getResult() ?? '')
         ) {
             $deployTask->appendLog('Docker服务已通过systemctl启动');
 
@@ -251,7 +253,7 @@ class DockerEnvironmentService
 
         if (
             CommandStatus::COMPLETED === $serviceCommand->getStatus()
-            && !$this->checkCommandError($serviceCommand->getResult() ?? '')
+            && !$this->commandOutputInspector->hasError($serviceCommand->getResult() ?? '')
         ) {
             $deployTask->appendLog('Docker服务已通过service启动');
 
@@ -324,7 +326,7 @@ class DockerEnvironmentService
         $status = $command->getStatus();
 
         // 检查命令是否真正成功执行
-        $hasError = $this->checkCommandError($result);
+        $hasError = $this->commandOutputInspector->hasError($result);
 
         if (CommandStatus::COMPLETED === $status && !$hasError) {
             $deployTask->appendLog("{$stepName}执行成功");
@@ -341,67 +343,4 @@ class DockerEnvironmentService
         }
     }
 
-    private const ERROR_PATTERNS = [
-        'command not found',
-        'Permission denied',
-        'No such file or directory',
-        'cannot create directory',
-        'Operation not permitted',
-        'Access denied',
-        'bash: line',
-        'Error:',
-        'ERROR:',
-        'Failed to',
-        'failed to',
-        'Interactive authentication required',
-        'sudo: no tty present',
-        'sudo: unable to resolve host',
-        'service: command not found',
-        'systemctl: command not found',
-    ];
-
-    /**
-     * 检查命令输出中是否包含错误信息
-     */
-    private function checkCommandError(string $output): bool
-    {
-        if ($this->isSudoPasswordPrompt($output)) {
-            return false;
-        }
-
-        return $this->containsErrorPattern($output);
-    }
-
-    private function isSudoPasswordPrompt(string $output): bool
-    {
-        return 1 === preg_match('/^\[sudo\] password for .+:/', trim($output));
-    }
-
-    private function containsErrorPattern(string $output): bool
-    {
-        foreach (self::ERROR_PATTERNS as $pattern) {
-            if ($this->hasPatternInOutput($output, $pattern)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasPatternInOutput(string $output, string $pattern): bool
-    {
-        if (false === stripos($output, $pattern)) {
-            return false;
-        }
-
-        $lines = explode("\n", $output);
-        foreach ($lines as $line) {
-            $cleanLine = trim($line);
-            if (false !== stripos($cleanLine, $pattern) && !$this->isSudoPasswordPrompt($cleanLine)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

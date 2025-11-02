@@ -8,6 +8,7 @@ use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Exception\DockerRegistryException;
+use ServerCommandBundle\Service\CommandOutputInspector;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 
@@ -22,6 +23,7 @@ class DockerRegistryService
         private readonly RemoteCommandService $remoteCommandService,
         private readonly DnsConfigurationService $dnsConfigurationService,
         private readonly LoggerInterface $logger,
+        private readonly CommandOutputInspector $commandOutputInspector,
     ) {
     }
 
@@ -247,7 +249,7 @@ class DockerRegistryService
         $status = $command->getStatus();
 
         // 检查命令是否真正成功执行
-        $hasError = $this->checkCommandError($result);
+        $hasError = $this->commandOutputInspector->hasError($result);
 
         if (CommandStatus::COMPLETED === $status && !$hasError) {
             $deployTask->appendLog("{$stepName}执行成功");
@@ -278,62 +280,4 @@ class DockerRegistryService
         }
     }
 
-    private const ERROR_PATTERNS = [
-        'ERROR:',
-        'Error:',
-        'FAILED',
-        'failed to',
-        'Cannot connect to the Docker daemon',
-        'docker: Error response from daemon',
-        'No such file or directory',
-        'Permission denied',
-        'command not found',
-        'Operation not permitted',
-        'Access denied',
-    ];
-
-    /**
-     * 检查命令输出中是否包含错误信息
-     */
-    private function checkCommandError(string $output): bool
-    {
-        if ($this->isSudoPasswordPrompt($output)) {
-            return false;
-        }
-
-        return $this->containsErrorPattern($output);
-    }
-
-    private function isSudoPasswordPrompt(string $output): bool
-    {
-        return 1 === preg_match('/^\[sudo\] password for .+:/', trim($output));
-    }
-
-    private function containsErrorPattern(string $output): bool
-    {
-        foreach (self::ERROR_PATTERNS as $pattern) {
-            if ($this->hasPatternInOutput($output, $pattern)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasPatternInOutput(string $output, string $pattern): bool
-    {
-        if (false === stripos($output, $pattern)) {
-            return false;
-        }
-
-        $lines = explode("\n", $output);
-        foreach ($lines as $line) {
-            $cleanLine = trim($line);
-            if (false !== stripos($cleanLine, $pattern) && !$this->isSudoPasswordPrompt($cleanLine)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

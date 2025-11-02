@@ -5,6 +5,7 @@ namespace ServerCommandBundle\Service\Quick;
 use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Exception\DnsConfigurationException;
+use ServerCommandBundle\Service\CommandOutputInspector;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerNodeBundle\Entity\Node;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
@@ -17,6 +18,7 @@ class DnsConfigurationService
 {
     public function __construct(
         private readonly RemoteCommandService $remoteCommandService,
+        private readonly CommandOutputInspector $commandOutputInspector,
     ) {
     }
 
@@ -354,7 +356,7 @@ class DnsConfigurationService
 
         if (
             CommandStatus::COMPLETED === $dnsConfigCommand->getStatus()
-            && !$this->checkCommandError($dnsConfigCommand->getResult() ?? '')
+            && !$this->commandOutputInspector->hasError($dnsConfigCommand->getResult() ?? '')
         ) {
             // 设置全局DNS域
             $domainCommand = $this->remoteCommandService->createCommand(
@@ -468,7 +470,7 @@ EOF',
         // 检查配置文件是否创建成功
         if (
             CommandStatus::COMPLETED !== $configResolvedCommand->getStatus()
-            || $this->checkCommandError($configResolvedCommand->getResult() ?? '')
+            || $this->commandOutputInspector->hasError($configResolvedCommand->getResult() ?? '')
         ) {
             throw DnsConfigurationException::configurationCreateFailed();
         }
@@ -619,7 +621,7 @@ EOF',
 
         if (
             CommandStatus::COMPLETED === $newDnsCommand->getStatus()
-            && !$this->checkCommandError($newDnsCommand->getResult() ?? '')
+            && !$this->commandOutputInspector->hasError($newDnsCommand->getResult() ?? '')
         ) {
             $deployTask->appendLog('DNS配置文件创建成功');
 
@@ -678,7 +680,7 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
 
         if (
             CommandStatus::COMPLETED === $tempDnsCommand->getStatus()
-            && !$this->checkCommandError($tempDnsCommand->getResult() ?? '')
+            && !$this->commandOutputInspector->hasError($tempDnsCommand->getResult() ?? '')
         ) {
             $deployTask->appendLog('使用临时文件成功创建DNS配置');
 
@@ -834,33 +836,6 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         $deployTask->appendLog('DNS配置验证: ' . $verifyResult);
     }
 
-    /**
-     * 检查命令输出中是否包含错误信息
-     */
-    private function checkCommandError(string $output): bool
-    {
-        $errorPatterns = [
-            'command not found',
-            'Permission denied',
-            'No such file or directory',
-            'cannot create directory',
-            'Operation not permitted',
-            'Access denied',
-            'bash: line',
-            'Error:',
-            'ERROR:',
-            'Failed to',
-            'failed to',
-        ];
-
-        foreach ($errorPatterns as $pattern) {
-            if (false !== stripos($output, $pattern)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     /**
      * 修复后验证DNS配置
