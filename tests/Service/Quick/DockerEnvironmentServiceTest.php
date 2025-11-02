@@ -11,6 +11,7 @@ use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Repository\RemoteCommandRepository;
+use ServerCommandBundle\Service\CommandOutputInspector;
 use ServerCommandBundle\Service\Quick\DockerEnvironmentService;
 use ServerCommandBundle\Service\RemoteCommandService;
 use ServerCommandBundle\Service\SshCommandExecutor;
@@ -143,7 +144,12 @@ final class DockerEnvironmentServiceTest extends TestCase
             }
         };
 
-        $this->service = new DockerEnvironmentService($this->remoteCommandService);
+        $commandOutputInspectorStub = TestCase::createStub(CommandOutputInspector::class);
+
+        $this->service = new DockerEnvironmentService(
+            $this->remoteCommandService,
+            $commandOutputInspectorStub
+        );
     }
 
     public function testServiceCreation(): void

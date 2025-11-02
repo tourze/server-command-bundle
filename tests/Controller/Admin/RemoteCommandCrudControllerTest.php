@@ -38,9 +38,7 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
 
     protected function onSetUp(): void
     {
-        $this->client = self::createClientWithDatabase();
-        // 确保静态客户端也被正确设置，以支持基类的 testUnauthenticatedAccessDenied 方法
-        self::getClient($this->client);
+        $this->client = self::createAuthenticatedClient();
         $this->createTestData();
     }
 
@@ -84,8 +82,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testGetEntityFqcnViaHttp(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过访问一个不存在的路径来间接测试控制器配置
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -109,11 +105,13 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testUserAccessDenied(): void
     {
-        $this->loginAsUser($this->client);
+        // 创建新的普通用户客户端
+        $userClient = self::createClientWithDatabase();
+        $this->loginAsUser($userClient);
 
         // 测试普通用户访问管理路径，应该抛出安全异常
         $this->expectException(AccessDeniedException::class);
-        $this->client->request('GET', '/admin/server-command/remote-command');
+        $userClient->request('GET', '/admin/server-command/remote-command');
     }
 
     /**
@@ -121,8 +119,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testAdminCanAccessAdminPanel(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试管理员访问管理路径
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -140,8 +136,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testRequiredNodeFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -163,8 +157,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testRequiredNameFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -198,8 +190,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testRequiredCommandFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -233,8 +223,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testValidationErrors(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 访问页面获取表单内容
         $this->client->request('GET', '/admin/server-command/remote-command');
         $response = $this->client->getResponse();
@@ -268,8 +256,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testExecuteCommandAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 构建执行命令的 URL - 使用 GET 方法测试路由是否存在
         $executeUrl = '/admin/server-command/remote-command/1/execute';
 
@@ -291,8 +277,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testCancelCommandAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 确保命令状态是 PENDING
         $this->testCommand->setStatus(CommandStatus::PENDING);
         $remoteCommandRepository = self::getService(RemoteCommandRepository::class);
@@ -318,8 +302,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testTerminalAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 构建终端页面的 URL
         $terminalUrl = '/admin/server-command/remote-command/terminal';
 
@@ -339,8 +321,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testBasicHttpResponses(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试各种可能的路径，验证基本的 HTTP 处理
         $testPaths = ['/admin/server-command/remote-command'];
 
@@ -362,7 +342,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
     public function testHttpSecurity(): void
     {
         // 测试管理员用户可以访问
-        $this->loginAsAdmin($this->client);
         $this->client->request('GET', '/admin/server-command/remote-command');
         $adminResponse = $this->client->getResponse();
 
@@ -381,8 +360,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testDataPersistenceViaHttp(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过 HTTP 请求验证测试数据存在
         $this->client->request('GET', '/admin/server-command/remote-command');
 
@@ -407,8 +384,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testSearchFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试搜索功能（使用固定的搜索词而不是直接访问对象方法）
         $this->client->request('GET', '/admin/server-command/remote-command?query=' . urlencode('测试命令'));
 
@@ -493,8 +468,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testNodeFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试节点过滤器
         $this->client->request('GET', '/admin/server-command/remote-command?filters[node]=1');
 
@@ -512,8 +485,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testNameFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试名称过滤器
         $this->client->request('GET', '/admin/server-command/remote-command?filters[name]=' . urlencode('测试命令'));
 
@@ -531,8 +502,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
      */
     public function testCommandFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试命令过滤器
         $this->client->request('GET', '/admin/server-command/remote-command?filters[command]=echo');
 

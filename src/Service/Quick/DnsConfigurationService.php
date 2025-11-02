@@ -836,7 +836,6 @@ mv /tmp/resolv.conf.new /etc/resolv.conf',
         $deployTask->appendLog('DNS配置验证: ' . $verifyResult);
     }
 
-
     /**
      * 修复后验证DNS配置
      */

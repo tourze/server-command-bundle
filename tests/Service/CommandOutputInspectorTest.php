@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace ServerCommandBundle\Tests\Service;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use ServerCommandBundle\Service\CommandOutputInspector;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
 /**
- * @covers \ServerCommandBundle\Service\CommandOutputInspector
+ * @internal
  */
-class CommandOutputInspectorTest extends TestCase
+#[RunTestsInSeparateProcesses]
+#[CoversClass(CommandOutputInspector::class)]
+class CommandOutputInspectorTest extends AbstractIntegrationTestCase
 {
     private CommandOutputInspector $inspector;
 
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->inspector = new CommandOutputInspector();
+        $this->inspector = self::getService(CommandOutputInspector::class);
     }
 
     /**

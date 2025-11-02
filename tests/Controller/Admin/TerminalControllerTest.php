@@ -13,6 +13,7 @@ use ServerNodeBundle\Repository\NodeRepository;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\User\InMemoryUser;
 use Tourze\GBT2659\Alpha2Code as GBT_2659_2000;
 use Tourze\PHPUnitSymfonyWebTest\AbstractWebTestCase;
 
@@ -35,6 +36,8 @@ final class TerminalControllerTest extends AbstractWebTestCase
     protected function onSetUp(): void
     {
         $this->client = self::createClientWithDatabase();
+        // 使用内存管理员用户登录，避免 provider 重载导致的角色丢失
+        $this->client->loginUser(new InMemoryUser('admin', 'password', ['ROLE_ADMIN']), 'main');
         $this->createTestData();
     }
 
@@ -61,10 +64,12 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testUserAccessDenied(): void
     {
-        $this->loginAsUser($this->client);
+        // 创建新的普通用户客户端
+        $userClient = self::createClientWithDatabase();
+        $this->loginAsUser($userClient);
 
         $this->expectException(AccessDeniedException::class);
-        $this->client->request('POST', '/admin/terminal/execute', [
+        $userClient->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             'command' => 'ls -la',
         ]);
@@ -75,8 +80,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testAdminCanAccessTerminal(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             'command' => 'ls -la',
@@ -96,8 +99,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithMissingNodeId(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'command' => 'ls -la',
             // 故意省略 nodeId
@@ -117,8 +118,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithEmptyNodeId(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '',
             'command' => 'ls -la',
@@ -138,8 +137,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithMissingCommand(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             // 故意省略 command
@@ -159,8 +156,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithEmptyCommand(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             'command' => '',
@@ -180,8 +175,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithNonExistentNode(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '999999',
             'command' => 'ls -la',
@@ -201,8 +194,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testInvokeWithValidRequest(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             'command' => 'echo "Hello World"',
@@ -222,8 +213,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testBasicHttpResponses(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 POST 请求
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
@@ -238,8 +227,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testGetTerminalPage(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 GET 方法对 POST 路由的处理（应该返回 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('GET', '/admin/terminal/execute');
@@ -250,8 +237,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testPutMethodNotAllowed(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 PUT 方法（应该返回 405 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('PUT', '/admin/terminal/execute', [
@@ -265,8 +250,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testDeleteMethodNotAllowed(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 DELETE 方法（应该返回 405 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('DELETE', '/admin/terminal/execute');
@@ -277,8 +260,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testPatchMethodNotAllowed(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 PATCH 方法（应该返回 405 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('PATCH', '/admin/terminal/execute', [
@@ -291,8 +272,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testHeadMethod(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 HEAD 方法对 POST 路由的处理（应该返回 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('HEAD', '/admin/terminal/execute');
@@ -303,8 +282,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testOptionsMethod(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试 OPTIONS 方法对 POST 路由的处理（应该返回 Method Not Allowed）
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request('OPTIONS', '/admin/terminal/execute');
@@ -316,7 +293,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
     public function testHttpSecurity(): void
     {
         // 先测试管理员可以访问
-        $this->loginAsAdmin($this->client);
         $this->client->request('POST', '/admin/terminal/execute', [
             'nodeId' => '1',
             'command' => 'test',
@@ -338,8 +314,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
      */
     public function testNotAllowedHttpMethods(): void
     {
-        $this->loginAsAdmin($this->client);
-
         $methods = ['GET', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 
         foreach ($methods as $method) {
@@ -359,8 +333,6 @@ final class TerminalControllerTest extends AbstractWebTestCase
     #[DataProvider('provideNotAllowedMethods')]
     public function testMethodNotAllowed(string $method): void
     {
-        $this->loginAsAdmin($this->client);
-
         $this->expectException(MethodNotAllowedHttpException::class);
         $this->client->request($method, '/admin/terminal/execute');
     }

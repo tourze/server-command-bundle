@@ -101,11 +101,6 @@ final class SshCommandExecutorTest extends AbstractIntegrationTestCase
             {
                 return 'testuser';
             }
-
-            public function getId(): string
-            {
-                return '123';
-            }
         };
 
         // 准备测试数据

@@ -38,9 +38,7 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
 
     protected function onSetUp(): void
     {
-        $this->client = self::createClientWithDatabase();
-        // 确保静态客户端也被正确设置，以支持基类的 testUnauthenticatedAccessDenied 方法
-        self::getClient($this->client);
+        $this->client = self::createAuthenticatedClient();
         $this->createTestData();
     }
 
@@ -80,8 +78,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testGetEntityFqcnViaHttp(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过访问控制器配置的路径来测试控制器配置
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -105,11 +101,13 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testUserAccessDenied(): void
     {
-        $this->loginAsUser($this->client);
+        // 创建新的普通用户客户端
+        $userClient = self::createClientWithDatabase();
+        $this->loginAsUser($userClient);
 
         // 测试普通用户访问管理路径，应该抛出安全异常
         $this->expectException(AccessDeniedException::class);
-        $this->client->request('GET', '/admin/server-command/remote-file-transfer');
+        $userClient->request('GET', '/admin/server-command/remote-file-transfer');
     }
 
     /**
@@ -117,8 +115,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testAdminCanAccessAdminPanel(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试管理员访问管理路径
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -136,8 +132,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testRequiredNodeFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -160,8 +154,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testRequiredNameFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -196,8 +188,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testRequiredLocalPathFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -232,8 +222,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testRequiredRemotePathFieldValidation(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 首先通过HTTP请求验证页面可访问性
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -268,8 +256,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testValidationErrors(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 访问页面获取表单内容
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
         $response = $this->client->getResponse();
@@ -306,8 +292,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testRetryTransferAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 确保文件传输状态是 FAILED
         $this->testFileTransfer->setStatus(FileTransferStatus::FAILED);
         $remoteFileTransferRepository = self::getService(RemoteFileTransferRepository::class);
@@ -333,8 +317,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testCancelTransferAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 确保文件传输状态是 UPLOADING
         $this->testFileTransfer->setStatus(FileTransferStatus::UPLOADING);
         $remoteFileTransferRepository = self::getService(RemoteFileTransferRepository::class);
@@ -360,8 +342,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testViewLogsAction(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 构建查看日志的 URL - 使用 GET 方法测试路由是否存在
         $logsUrl = '/admin/server-command/remote-file-transfer/1/logs';
 
@@ -381,8 +361,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testBasicHttpResponses(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试各种可能的路径，验证基本的 HTTP 处理
         $testPaths = ['/admin/server-command/remote-file-transfer'];
 
@@ -404,7 +382,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
     public function testHttpSecurity(): void
     {
         // 测试管理员用户可以访问
-        $this->loginAsAdmin($this->client);
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
         $adminResponse = $this->client->getResponse();
 
@@ -423,8 +400,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testDataPersistenceViaHttp(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过 HTTP 请求验证测试数据存在
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
 
@@ -450,8 +425,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testSearchFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试搜索功能
         $this->client->request('GET', '/admin/server-command/remote-file-transfer?query=' . urlencode('测试文件传输'));
 
@@ -469,8 +442,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testNodeFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试节点过滤器
         $this->client->request('GET', '/admin/server-command/remote-file-transfer?filters[node]=1');
 
@@ -488,8 +459,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testNameFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试名称过滤器
         $this->client->request('GET', '/admin/server-command/remote-file-transfer?filters[name]=' . urlencode('测试文件传输'));
 
@@ -507,8 +476,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testStatusFilterFunctionality(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试状态过滤器
         $this->client->request('GET', '/admin/server-command/remote-file-transfer?filters[status]=pending');
 
@@ -526,8 +493,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testFileTransferStatusEnumValues(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过创建文件传输记录来测试枚举值在 HTTP 层的使用
         $this->client->request('POST', '/admin/server-command/remote-file-transfer/new', [
             'name' => '状态测试传输',
@@ -551,8 +516,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testFileTransferStatusTerminalCheck(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 测试各种终态状态的过滤功能（通过HTTP请求验证枚举功能）
         $terminalStatuses = ['completed', 'failed', 'canceled'];
 
@@ -579,8 +542,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
      */
     public function testFileTransferStatusColors(): void
     {
-        $this->loginAsAdmin($this->client);
-
         // 通过访问文件传输列表页面验证状态颜色在UI中的使用
         $this->client->request('GET', '/admin/server-command/remote-file-transfer');
         $response = $this->client->getResponse();

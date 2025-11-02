@@ -279,5 +279,4 @@ class DockerRegistryService
             throw DockerRegistryException::directoryCreationFailed();
         }
     }
-
 }

@@ -12,6 +12,7 @@ use ServerCommandBundle\Contracts\ProgressModel;
 use ServerCommandBundle\Entity\RemoteCommand;
 use ServerCommandBundle\Enum\CommandStatus;
 use ServerCommandBundle\Repository\RemoteCommandRepository;
+use ServerCommandBundle\Service\CommandOutputInspector;
 use ServerCommandBundle\Service\Quick\DnsConfigurationService;
 use ServerCommandBundle\Service\Quick\DockerRegistryService;
 use ServerCommandBundle\Service\RemoteCommandService;
@@ -101,14 +102,17 @@ final class DockerRegistryServiceTest extends AbstractIntegrationTestCase
 
         // 创建 RemoteCommandService stub 对象
         $remoteCommandServiceStub = TestCase::createStub(RemoteCommandService::class);
+        $commandOutputInspectorStub = TestCase::createStub(CommandOutputInspector::class);
 
-        $this->dnsConfigurationService = new class($remoteCommandServiceStub) extends DnsConfigurationService {
+        $this->dnsConfigurationService = new class($remoteCommandServiceStub, $commandOutputInspectorStub) extends DnsConfigurationService {
             public int $checkAndFixDnsCount = 0;
 
-            public function __construct(RemoteCommandService $remoteCommandService)
-            {
+            public function __construct(
+                RemoteCommandService $remoteCommandService,
+                CommandOutputInspector $commandOutputInspector,
+            ) {
                 // 调用父类构造函数，使用传入的 stub 对象
-                parent::__construct($remoteCommandService);
+                parent::__construct($remoteCommandService, $commandOutputInspector);
             }
 
             public function checkAndFixDns(ProgressModel $progressModel, Node $node): void
@@ -202,7 +206,8 @@ final class DockerRegistryServiceTest extends AbstractIntegrationTestCase
         $this->service = new DockerRegistryService(
             $this->remoteCommandService,
             $this->dnsConfigurationService,
-            $this->logger
+            $this->logger,
+            $commandOutputInspectorStub
         );
     }
 

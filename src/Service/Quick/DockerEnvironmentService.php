@@ -342,5 +342,4 @@ class DockerEnvironmentService
             throw DockerEnvironmentException::directoryCreationFailed();
         }
     }
-
 }
