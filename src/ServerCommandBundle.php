@@ -6,6 +6,7 @@ use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use ServerNodeBundle\ServerNodeBundle;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Tourze\BundleDependency\BundleDependencyInterface;
+use Tourze\EasyAdminMenuBundle\EasyAdminMenuBundle;
 use Tourze\RoutingAutoLoaderBundle\RoutingAutoLoaderBundle;
 use Tourze\ScheduleEntityCleanBundle\ScheduleEntityCleanBundle;
 
@@ -18,6 +19,7 @@ class ServerCommandBundle extends Bundle implements BundleDependencyInterface
             RoutingAutoLoaderBundle::class => ['all' => true],
             ScheduleEntityCleanBundle::class => ['all' => true],
             ServerNodeBundle::class => ['all' => true],
+            EasyAdminMenuBundle::class => ['all' => true],
         ];
     }
 }
