@@ -34,7 +34,7 @@
     "symfony/security-core": "^7.3",
     "symfony/serializer": "^7.3",
     "symfony/yaml": "^7.3",
-    "tourze/async-contracts": "0.0.*",
+    "tourze/async-contracts": "1.0.*",
     "tourze/bundle-dependency": "1.*",
     "tourze/doctrine-timestamp-bundle": "1.0.*",
     "tourze/doctrine-track-bundle": "1.0.*",

@@ -36,7 +36,7 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
 
     private RemoteFileTransfer $testFileTransfer;
 
-    protected function onSetUp(): void
+    protected function onAfterSetUp(): void
     {
         $this->client = self::createAuthenticatedClient();
         $this->createTestData();

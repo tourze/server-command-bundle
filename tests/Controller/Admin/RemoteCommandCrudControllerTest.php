@@ -36,7 +36,7 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
 
     private RemoteCommand $testCommand;
 
-    protected function onSetUp(): void
+    protected function afterEasyAdminSetUp(): void
     {
         $this->client = self::createAuthenticatedClient();
         $this->createTestData();
