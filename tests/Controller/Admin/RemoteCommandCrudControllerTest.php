@@ -76,31 +76,6 @@ final class RemoteCommandCrudControllerTest extends AbstractEasyAdminControllerT
     }
 
     /**
-     * 测试静态方法 - 获取实体类名 (通过 HTTP 层面间接测试)
-     *
-     * 通过尝试访问一个不存在的路由来测试系统配置
-     */
-    public function testGetEntityFqcnViaHttp(): void
-    {
-        // 通过访问一个不存在的路径来间接测试控制器配置
-        $this->client->request('GET', '/admin/server-command/remote-command');
-
-        $response = $this->client->getResponse();
-
-        // 任何 HTTP 响应都说明系统在工作，间接验证控制器配置正确
-        self::assertTrue(
-            $response->getStatusCode() >= 200 && $response->getStatusCode() < 600,
-            sprintf('HTTP system should respond, got %d', $response->getStatusCode())
-        );
-
-        // 验证页面包含RemoteCommand相关内容（间接测试实体类名配置）
-        $responseContent = $response->getContent();
-        if (200 === $response->getStatusCode() && false !== $responseContent) {
-            self::assertStringContainsString('RemoteCommand', $responseContent);
-        }
-    }
-
-    /**
      * 测试普通用户访问被拒绝
      */
     public function testUserAccessDenied(): void

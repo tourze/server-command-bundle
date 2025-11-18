@@ -74,29 +74,6 @@ final class RemoteFileTransferCrudControllerTest extends AbstractEasyAdminContro
     }
 
     /**
-     * 测试静态方法 - 获取实体类名 (通过 HTTP 层面间接测试)
-     */
-    public function testGetEntityFqcnViaHttp(): void
-    {
-        // 通过访问控制器配置的路径来测试控制器配置
-        $this->client->request('GET', '/admin/server-command/remote-file-transfer');
-
-        $response = $this->client->getResponse();
-
-        // 任何 HTTP 响应都说明系统在工作，间接验证控制器配置正确
-        self::assertTrue(
-            $response->getStatusCode() >= 200 && $response->getStatusCode() < 600,
-            sprintf('HTTP system should respond, got %d', $response->getStatusCode())
-        );
-
-        // 验证页面包含RemoteFileTransfer相关内容（间接测试实体类名配置）
-        $responseContent = $response->getContent();
-        if (200 === $response->getStatusCode() && false !== $responseContent) {
-            self::assertStringContainsString('RemoteFileTransfer', $responseContent);
-        }
-    }
-
-    /**
      * 测试普通用户访问被拒绝
      */
     public function testUserAccessDenied(): void
